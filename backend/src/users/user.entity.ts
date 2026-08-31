@@ -39,6 +39,12 @@ export class User {
   @Column({ type: 'boolean', nullable: true })
   verified!: boolean | null;
 
+  @Column({ type: 'text', nullable: true })
+  subscriptionPlan!: string | null;
+
+  @Column({ type: 'datetime', nullable: true })
+  subscriptionExpiresAt!: Date | null;
+
   // Jobseeker-only fields
   @Column({ type: 'text', nullable: true })
   headline!: string | null;
@@ -54,6 +60,18 @@ export class User {
 
   @Column({ type: 'boolean', nullable: true })
   discoverable!: boolean | null;
+
+  @Column({ type: 'text', nullable: true })
+  category!: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  yearsOfExperience!: number | null;
+
+  @Column({ type: 'text', nullable: true })
+  preferredJobType!: string | null;
+
+  @Column({ type: 'int', default: 0 })
+  profileViews!: number;
 }
 
 export type SafeUser = Omit<User, 'passwordHash'>;

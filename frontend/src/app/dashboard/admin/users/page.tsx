@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useApp } from "@/lib/store";
 import { apiFetch } from "@/lib/api";
-import { formatDate } from "@/lib/helpers";
+import { formatDate, isSubscriptionActive } from "@/lib/helpers";
 import { ROLES } from "@/lib/types";
 import { Avatar, Badge, Button, Card, Input, PageHeader, Select } from "@/components/ui/Primitives";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -25,7 +25,7 @@ interface PaginatedUsersResponse {
 }
 
 export default function AdminUsers() {
-  const { currentUser, adminSetUserStatus, adminVerifyEmployer } = useApp();
+  const { currentUser, adminSetUserStatus, adminVerifyEmployer, adminSetSubscription } = useApp();
   const [query, setQuery] = useState("");
   const [role, setRole] = useState("All");
   const [page, setPage] = useState(1);
@@ -97,6 +97,7 @@ export default function AdminUsers() {
               <th className="px-5 py-3 font-medium">User</th>
               <th className="px-5 py-3 font-medium">Role</th>
               <th className="px-5 py-3 font-medium">Status</th>
+              <th className="px-5 py-3 font-medium">Plan</th>
               <th className="px-5 py-3 font-medium">Joined</th>
               <th className="px-5 py-3 font-medium text-right">Actions</th>
             </tr>
@@ -104,13 +105,13 @@ export default function AdminUsers() {
           <tbody className="divide-y divide-zinc-100">
             {loading && users.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-5 py-8 text-center text-sm text-zinc-400">
+                <td colSpan={6} className="px-5 py-8 text-center text-sm text-zinc-400">
                   Loading…
                 </td>
               </tr>
             ) : users.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-5 py-8 text-center text-sm text-zinc-400">
+                <td colSpan={6} className="px-5 py-8 text-center text-sm text-zinc-400">
                   No users match this filter.
                 </td>
               </tr>
@@ -137,6 +138,22 @@ export default function AdminUsers() {
                   <td className="px-5 py-3">
                     <StatusBadge status={u.status} />
                   </td>
+                  <td className="px-5 py-3">
+                    {u.role === ROLES.EMPLOYER ? (
+                      isSubscriptionActive(u) ? (
+                        <div>
+                          <Badge tone="indigo" className="capitalize">
+                            {u.subscriptionPlan}
+                          </Badge>
+                          <p className="mt-1 text-xs text-zinc-400">until {formatDate(u.subscriptionExpiresAt!)}</p>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-zinc-400">Free</span>
+                      )
+                    ) : (
+                      <span className="text-xs text-zinc-300">—</span>
+                    )}
+                  </td>
                   <td className="px-5 py-3 text-zinc-500">{formatDate(u.createdAt)}</td>
                   <td className="px-5 py-3">
                     <div className="flex justify-end gap-2">
@@ -148,6 +165,25 @@ export default function AdminUsers() {
                         >
                           Verify
                         </Button>
+                      ) : null}
+                      {u.role === ROLES.EMPLOYER ? (
+                        isSubscriptionActive(u) ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => withRefresh(adminSetSubscription(u.id, null))}
+                          >
+                            Revoke plan
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => withRefresh(adminSetSubscription(u.id, "pro"))}
+                          >
+                            Grant Pro (30d)
+                          </Button>
+                        )
                       ) : null}
                       {u.id !== currentUser.id ? (
                         <Button

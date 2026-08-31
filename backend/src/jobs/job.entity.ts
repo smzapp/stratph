@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { ModerationStatus } from '../common/enums.js';
 
 @Entity('jobs')
 export class Job {
@@ -31,4 +32,7 @@ export class Job {
 
   @Column({ default: 'open' })
   status!: string;
+
+  @Column({ type: 'varchar', default: ModerationStatus.PENDING })
+  moderation!: ModerationStatus;
 }

@@ -25,7 +25,7 @@ export default function JobseekerOffers() {
       {offers.length === 0 ? (
         <EmptyState
           title="No offers yet"
-          description="Do great work on a micro job and employers may offer to upgrade you to part-time, contract, or full-time."
+          description="Do great work on a Trial Task and employers may offer to upgrade you to part-time, contract, or full-time."
         />
       ) : (
         <div className="space-y-4">

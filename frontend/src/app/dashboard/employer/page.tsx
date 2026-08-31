@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useApp } from "@/lib/store";
-import { getMicroJobsForEmployer, getUserById, formatPeso, timeAgo } from "@/lib/helpers";
+import { formatDate, getMicroJobsForEmployer, getUserById, isSubscriptionActive, timeAgo } from "@/lib/helpers";
 import { Badge, Button, Card, EmptyState, PageHeader, StatCard } from "@/components/ui/Primitives";
 
 export default function EmployerOverview() {
@@ -15,9 +15,8 @@ export default function EmployerOverview() {
     mj.applicants.filter((a) => a.status === "submitted").map((a) => ({ microJob: mj, applicant: a })),
   );
 
-  const spent = db.payments
-    .filter((p) => p.employerId === currentUser.id && p.status === "released")
-    .reduce((sum, p) => sum + p.amount, 0);
+  const candidatesEngaged = new Set(myMicroJobs.flatMap((mj) => mj.applicants.map((a) => a.jobseekerId)))
+    .size;
 
   const openMicroJobs = myMicroJobs.filter((mj) => mj.status === "open").length;
   const upgraded = myMicroJobs.reduce(
@@ -25,8 +24,34 @@ export default function EmployerOverview() {
     0,
   );
 
+  const isSubscribed = isSubscriptionActive(currentUser);
+
   return (
     <div>
+      <Card className={`mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between ${isSubscribed ? "border-indigo-200 bg-indigo-50/50" : ""}`}>
+        <div>
+          <p className="text-sm font-semibold text-zinc-900">
+            {isSubscribed ? (
+              <>
+                You&apos;re on the <span className="capitalize text-indigo-600">{currentUser.subscriptionPlan}</span> plan
+              </>
+            ) : (
+              "You're on the Free plan"
+            )}
+          </p>
+          <p className="mt-0.5 text-sm text-zinc-500">
+            {isSubscribed
+              ? `Job postings auto-approve until ${formatDate(currentUser.subscriptionExpiresAt!)}.`
+              : "Job postings are reviewed by a Super Admin before going live."}
+          </p>
+        </div>
+        <Link href="/pricing">
+          <Button size="sm" variant="outline">
+            {isSubscribed ? "Manage plan" : "View plans"}
+          </Button>
+        </Link>
+      </Card>
+
       <PageHeader
         eyebrow="Employer"
         title={currentUser.companyName || currentUser.name}
@@ -37,24 +62,24 @@ export default function EmployerOverview() {
               <Button variant="outline">Search candidates</Button>
             </Link>
             <Link href="/dashboard/employer/micro-jobs">
-              <Button>Post a micro job</Button>
+              <Button>Post a Trial Task</Button>
             </Link>
           </>
         }
       />
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Open micro jobs" value={openMicroJobs} tone="indigo" />
+        <StatCard label="Open trial tasks" value={openMicroJobs} tone="indigo" />
         <StatCard label="Submissions to review" value={pendingSubmissions.length} tone="amber" />
         <StatCard label="Trials upgraded" value={upgraded} tone="emerald" hint="to part-time/contract/full-time" />
-        <StatCard label="Total paid out" value={formatPeso(spent)} tone="rose" />
+        <StatCard label="Candidates engaged" value={candidatesEngaged} tone="rose" hint="Unique jobseekers who applied" />
       </div>
 
       <Card>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-zinc-900">Submissions waiting for review</h2>
           <Link href="/dashboard/employer/micro-jobs" className="text-xs font-medium text-indigo-600">
-            View all micro jobs
+            View all trial tasks
           </Link>
         </div>
         {pendingSubmissions.length === 0 ? (

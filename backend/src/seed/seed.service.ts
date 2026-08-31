@@ -8,15 +8,17 @@ import { Applicant } from '../micro-jobs/applicant.entity.js';
 import { Job } from '../jobs/job.entity.js';
 import { ActivityEntry } from '../activity/activity.entity.js';
 import { Offer } from '../offers/offer.entity.js';
-import { Payment } from '../payments/payment.entity.js';
+import { ProfileView } from '../users/profile-view.entity.js';
+import { Report } from '../reports/report.entity.js';
 import {
   ActivityType,
   ApplicantStatus,
   MicroJobStatus,
   ModerationStatus,
   OfferStatus,
-  PaymentStatus,
+  ReportReason,
   Role,
+  SubscriptionPlan,
   UserStatus,
 } from '../common/enums.js';
 
@@ -33,7 +35,8 @@ export class SeedService implements OnApplicationBootstrap {
     @InjectRepository(Job) private readonly jobsRepo: Repository<Job>,
     @InjectRepository(ActivityEntry) private readonly activityRepo: Repository<ActivityEntry>,
     @InjectRepository(Offer) private readonly offersRepo: Repository<Offer>,
-    @InjectRepository(Payment) private readonly paymentsRepo: Repository<Payment>,
+    @InjectRepository(ProfileView) private readonly profileViewsRepo: Repository<ProfileView>,
+    @InjectRepository(Report) private readonly reportsRepo: Repository<Report>,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
@@ -71,6 +74,8 @@ export class SeedService implements OnApplicationBootstrap {
         companyName: 'BrightHive Solutions',
         companyBlurb: 'Remote-first SaaS studio building tools for LGUs.',
         verified: true,
+        subscriptionPlan: SubscriptionPlan.PRO,
+        subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         status: UserStatus.ACTIVE,
         createdAt: d('2026-01-10T08:00:00Z'),
       }),
@@ -113,8 +118,11 @@ export class SeedService implements OnApplicationBootstrap {
         headline: 'Frontend Developer • React & Next.js',
         location: 'Quezon City, NCR',
         skills: ['React', 'Next.js', 'Tailwind CSS', 'AWS', 'TypeScript'],
-        bio: '3 years building customer dashboards. Learning cloud deploys via micro jobs.',
+        bio: '3 years building customer dashboards. Learning cloud deploys via trial tasks.',
         discoverable: true,
+        category: 'Web Development',
+        yearsOfExperience: 3,
+        preferredJobType: 'Full-time',
         status: UserStatus.ACTIVE,
         createdAt: d('2026-01-12T08:00:00Z'),
       }),
@@ -131,6 +139,9 @@ export class SeedService implements OnApplicationBootstrap {
         skills: ['Customer Support', 'Zendesk', 'Excel', 'Email Handling'],
         bio: 'Ex-BPO team lead, 5 years. Fast, accurate, night-shift ready.',
         discoverable: true,
+        category: 'Customer Support',
+        yearsOfExperience: 5,
+        preferredJobType: 'Part-time',
         status: UserStatus.ACTIVE,
         createdAt: d('2026-01-18T08:00:00Z'),
       }),
@@ -147,6 +158,9 @@ export class SeedService implements OnApplicationBootstrap {
         skills: ['Premiere Pro', 'After Effects', 'Video Editing'],
         bio: 'Editing short-form content for PH brands for 2 years.',
         discoverable: false,
+        category: 'Video Editing',
+        yearsOfExperience: 2,
+        preferredJobType: 'Freelance',
         status: UserStatus.ACTIVE,
         createdAt: d('2026-02-02T08:00:00Z'),
       }),
@@ -163,6 +177,9 @@ export class SeedService implements OnApplicationBootstrap {
         skills: ['Node.js', 'AWS', 'PostgreSQL', 'Docker'],
         bio: 'Deploying side projects to AWS to build a public track record.',
         discoverable: true,
+        category: 'Web Development',
+        yearsOfExperience: 4,
+        preferredJobType: 'Contract',
         status: UserStatus.ACTIVE,
         createdAt: d('2026-02-10T08:00:00Z'),
       }),
@@ -241,6 +258,7 @@ export class SeedService implements OnApplicationBootstrap {
         skillsRequired: ['Video Editing', 'Premiere Pro'],
         status: MicroJobStatus.OPEN,
         moderation: ModerationStatus.APPROVED,
+        expiresAt: d('2026-08-29T03:00:00Z'),
         createdAt: d('2026-08-24T03:00:00Z'),
       }),
     );
@@ -287,6 +305,7 @@ export class SeedService implements OnApplicationBootstrap {
         skillsRequired: ['Writing', 'SEO'],
         status: MicroJobStatus.OPEN,
         moderation: ModerationStatus.PENDING,
+        minProfileCompleteness: 70,
         createdAt: d('2026-08-28T03:00:00Z'),
       }),
     );
@@ -304,6 +323,7 @@ export class SeedService implements OnApplicationBootstrap {
         skillsRequired: ['Node.js', 'AWS', 'Docker'],
         status: MicroJobStatus.OPEN,
         moderation: ModerationStatus.APPROVED,
+        minYearsOfExperience: 3,
         createdAt: d('2026-08-05T03:00:00Z'),
       }),
     );
@@ -332,6 +352,7 @@ export class SeedService implements OnApplicationBootstrap {
         skillsRequired: ['React', 'JavaScript', 'CSS', 'Git'],
         applicants: 12,
         status: 'open',
+        moderation: ModerationStatus.APPROVED,
         postedAt: d('2026-08-15T03:00:00Z'),
       }),
     );
@@ -345,6 +366,7 @@ export class SeedService implements OnApplicationBootstrap {
         skillsRequired: ['Customer Support', 'Zendesk', 'Excel', 'Communication'],
         applicants: 27,
         status: 'open',
+        moderation: ModerationStatus.PENDING,
         postedAt: d('2026-08-18T03:00:00Z'),
       }),
     );
@@ -358,6 +380,7 @@ export class SeedService implements OnApplicationBootstrap {
         skillsRequired: ['Node.js', 'AWS', 'PostgreSQL', 'Docker', 'TypeScript'],
         applicants: 8,
         status: 'open',
+        moderation: ModerationStatus.APPROVED,
         postedAt: d('2026-08-22T03:00:00Z'),
       }),
     );
@@ -430,41 +453,34 @@ export class SeedService implements OnApplicationBootstrap {
       }),
     ]);
 
-    // Payments
-    await this.paymentsRepo.save([
-      this.paymentsRepo.create({
-        microJobId: mj1.id,
-        jobseekerId: jobseeker1.id,
-        employerId: employer1.id,
-        amount: 1500,
-        status: PaymentStatus.RELEASED,
-        date: d('2026-08-12T02:00:00Z'),
-      }),
-      this.paymentsRepo.create({
-        microJobId: mj4.id,
-        jobseekerId: jobseeker2.id,
-        employerId: employer2.id,
-        amount: 600,
-        status: PaymentStatus.RELEASED,
-        date: d('2026-07-02T02:00:00Z'),
-      }),
-      this.paymentsRepo.create({
-        microJobId: mj6.id,
-        jobseekerId: jobseeker4.id,
-        employerId: employer1.id,
-        amount: 3000,
-        status: PaymentStatus.RELEASED,
-        date: d('2026-08-09T03:00:00Z'),
-      }),
-      this.paymentsRepo.create({
-        microJobId: mj2.id,
-        jobseekerId: jobseeker2.id,
-        employerId: employer1.id,
-        amount: 800,
-        status: PaymentStatus.IN_ESCROW,
-        date: d('2026-08-22T05:30:00Z'),
-      }),
+    // Profile views — gives the jobseeker analytics page something real to show.
+    const now = Date.now();
+    const daysAgo = (n: number) => new Date(now - n * 24 * 60 * 60 * 1000);
+    await this.profileViewsRepo.save([
+      this.profileViewsRepo.create({ viewedUserId: jobseeker1.id, viewerId: employer1.id, createdAt: daysAgo(1) }),
+      this.profileViewsRepo.create({ viewedUserId: jobseeker1.id, viewerId: employer2.id, createdAt: daysAgo(3) }),
+      this.profileViewsRepo.create({ viewedUserId: jobseeker1.id, viewerId: null, createdAt: daysAgo(6) }),
+      this.profileViewsRepo.create({ viewedUserId: jobseeker1.id, viewerId: employer1.id, createdAt: daysAgo(12) }),
+      this.profileViewsRepo.create({ viewedUserId: jobseeker1.id, viewerId: null, createdAt: daysAgo(20) }),
+      this.profileViewsRepo.create({ viewedUserId: jobseeker4.id, viewerId: employer1.id, createdAt: daysAgo(2) }),
+      this.profileViewsRepo.create({ viewedUserId: jobseeker4.id, viewerId: employer2.id, createdAt: daysAgo(9) }),
+      this.profileViewsRepo.create({ viewedUserId: jobseeker2.id, viewerId: employer2.id, createdAt: daysAgo(4) }),
     ]);
+    await this.usersRepo.increment({ id: jobseeker1.id }, 'profileViews', 5);
+    await this.usersRepo.increment({ id: jobseeker4.id }, 'profileViews', 2);
+    await this.usersRepo.increment({ id: jobseeker2.id }, 'profileViews', 1);
+
+    // Reports — gives the admin Reports queue something to review.
+    await this.reportsRepo.save(
+      this.reportsRepo.create({
+        reporterId: jobseeker2.id,
+        reportedUserId: employer2.id,
+        reason: ReportReason.NON_PAYMENT,
+        details: "Completed the customer support backlog task but haven't received payment yet.",
+        contextLabel: 'Trial Task: Answer 20 customer support emails (backlog clear-out)',
+        createdAt: daysAgo(5),
+      }),
+    );
 
     this.logger.log(`Seeded admin login: admin@test.com / ${DEMO_PASSWORD}`);
   }

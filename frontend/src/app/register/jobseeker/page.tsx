@@ -5,7 +5,8 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useApp } from "@/lib/store";
-import { Button, Card, Input, Textarea } from "@/components/ui/Primitives";
+import { Button, Card, Input, Select, Textarea } from "@/components/ui/Primitives";
+import { CATEGORIES, JOB_TYPES } from "@/lib/constants";
 
 export default function RegisterJobseekerPage() {
   const router = useRouter();
@@ -17,6 +18,9 @@ export default function RegisterJobseekerPage() {
     headline: "",
     location: "",
     skills: "",
+    category: "",
+    yearsOfExperience: "",
+    preferredJobType: "",
   });
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -34,6 +38,9 @@ export default function RegisterJobseekerPage() {
       skills: form.skills
         ? form.skills.split(",").map((s) => s.trim()).filter(Boolean)
         : undefined,
+      category: form.category || undefined,
+      yearsOfExperience: form.yearsOfExperience ? Number(form.yearsOfExperience) : undefined,
+      preferredJobType: form.preferredJobType || undefined,
     });
     if (!result.ok) {
       setError(result.error || "Could not create your account.");
@@ -99,6 +106,40 @@ export default function RegisterJobseekerPage() {
               value={form.skills}
               onChange={(e) => setForm({ ...form, skills: e.target.value })}
             />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Select
+                label="Category (optional)"
+                value={form.category}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+              >
+                <option value="">Choose one…</option>
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </Select>
+              <Input
+                label="Years of experience (optional)"
+                type="number"
+                min={0}
+                max={60}
+                value={form.yearsOfExperience}
+                onChange={(e) => setForm({ ...form, yearsOfExperience: e.target.value })}
+              />
+            </div>
+            <Select
+              label="Preferred job type (optional)"
+              value={form.preferredJobType}
+              onChange={(e) => setForm({ ...form, preferredJobType: e.target.value })}
+            >
+              <option value="">Choose one…</option>
+              {JOB_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </Select>
             {error ? <p className="text-sm text-rose-600">{error}</p> : null}
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? "Creating account…" : "Create account"}

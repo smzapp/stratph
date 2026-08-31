@@ -8,11 +8,13 @@ import { AuthController } from './auth.controller.js';
 import { JwtStrategy } from './jwt.strategy.js';
 import { PasswordResetToken } from './password-reset-token.entity.js';
 import { UsersModule } from '../users/users.module.js';
+import { NotificationsModule } from '../notifications/notifications.module.js';
 
 @Global()
 @Module({
   imports: [
     UsersModule,
+    NotificationsModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     TypeOrmModule.forFeature([PasswordResetToken]),
     JwtModule.registerAsync({

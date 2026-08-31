@@ -8,9 +8,10 @@ import { useApp } from "@/lib/store";
 
 const NAV: NavItem[] = [
   { href: "/dashboard/employer", label: "Overview", icon: "🏠" },
-  { href: "/dashboard/employer/micro-jobs", label: "Micro Jobs", icon: "⚡" },
+  { href: "/dashboard/employer/micro-jobs", label: "Trial Tasks", icon: "⚡" },
   { href: "/dashboard/employer/search", label: "Reverse Hiring", icon: "🧭" },
   { href: "/dashboard/employer/jobs", label: "Job Postings", icon: "📋" },
+  { href: "/pricing", label: "Pricing", icon: "💳" },
 ];
 
 function EmployerNav({ children }: { children: ReactNode }) {

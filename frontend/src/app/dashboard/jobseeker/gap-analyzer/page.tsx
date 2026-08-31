@@ -141,7 +141,7 @@ export default function GapAnalyzer() {
                                 </Link>
                               ) : (
                                 <p className="ml-6 mt-1 text-xs text-zinc-400">
-                                  No micro job for this skill yet — add it to your profile once you&apos;ve
+                                  No Trial Task for this skill yet — add it to your profile once you&apos;ve
                                   practiced it.
                                 </p>
                               )}

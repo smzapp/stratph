@@ -19,6 +19,9 @@ export class Applicant {
   @Column({ type: 'varchar', default: ApplicantStatus.APPLIED })
   status!: ApplicantStatus;
 
+  @Column({ default: false })
+  invited!: boolean;
+
   @CreateDateColumn()
   appliedAt!: Date;
 
@@ -42,6 +45,7 @@ export function serializeApplicant(a: Applicant) {
   return {
     jobseekerId: a.jobseekerId,
     status: a.status,
+    invited: a.invited,
     appliedAt: a.appliedAt,
     submission:
       a.submissionNote !== null || a.submissionLink !== null

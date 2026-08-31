@@ -7,7 +7,8 @@ import { randomUUID } from 'node:crypto';
 import { UsersService } from '../users/users.service.js';
 import { toSafeUser } from '../users/user.entity.js';
 import type { SafeUser } from '../users/user.entity.js';
-import { Role, UserStatus } from '../common/enums.js';
+import { NotificationType, Role, UserStatus } from '../common/enums.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { PasswordResetToken } from './password-reset-token.entity.js';
 import type { RegisterJobseekerDto } from './dto/register-jobseeker.dto.js';
 import type { RegisterEmployerDto } from './dto/register-employer.dto.js';
@@ -24,6 +25,7 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly notificationsService: NotificationsService,
     @InjectRepository(PasswordResetToken)
     private readonly resetTokenRepo: Repository<PasswordResetToken>,
   ) {}
@@ -41,6 +43,9 @@ export class AuthService {
       headline: dto.headline,
       location: dto.location,
       skills: dto.skills,
+      category: dto.category,
+      yearsOfExperience: dto.yearsOfExperience,
+      preferredJobType: dto.preferredJobType,
     });
     return { accessToken: this.issueToken(user.id, user.role), user: toSafeUser(user) };
   }
@@ -54,6 +59,16 @@ export class AuthService {
       companyName: dto.companyName,
       companyBlurb: dto.companyBlurb,
     });
+
+    const admins = await this.usersService.findByRole(Role.ADMIN);
+    await this.notificationsService.notifyMany(
+      admins.map((a) => a.id),
+      NotificationType.EMPLOYER_PENDING_VERIFICATION,
+      'New employer awaiting verification',
+      `${user.companyName || user.name} just registered and is not yet verified.`,
+      '/dashboard/admin/users',
+    );
+
     return { accessToken: this.issueToken(user.id, user.role), user: toSafeUser(user) };
   }
 

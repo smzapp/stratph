@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
+import Link from "next/link";
 import { useApp } from "@/lib/store";
-import { timeAgo } from "@/lib/helpers";
+import { formatDate, isSubscriptionActive, timeAgo } from "@/lib/helpers";
 import { Badge, Button, Card, EmptyState, Input, PageHeader, Select } from "@/components/ui/Primitives";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Modal } from "@/components/ui/Modal";
 
 interface JobFormState {
@@ -29,6 +31,8 @@ export default function EmployerJobPostings() {
   const [form, setForm] = useState<JobFormState>(EMPTY_FORM);
 
   if (!currentUser) return null;
+
+  const isSubscribed = isSubscriptionActive(currentUser);
 
   const myJobs = db.jobs
     .filter((j) => j.employerId === currentUser.id)
@@ -56,6 +60,22 @@ export default function EmployerJobPostings() {
         actions={<Button onClick={() => setOpen(true)}>Post a job</Button>}
       />
 
+      <Card className={`mb-6 ${isSubscribed ? "border-emerald-200 bg-emerald-50/50" : "border-amber-200 bg-amber-50/50"}`}>
+        {isSubscribed ? (
+          <p className="text-sm text-emerald-800">
+            ✓ Your <span className="font-semibold capitalize">{currentUser.subscriptionPlan}</span> plan
+            auto-approves new job postings until {formatDate(currentUser.subscriptionExpiresAt!)}.
+          </p>
+        ) : (
+          <p className="text-sm text-amber-800">
+            New job postings are reviewed by a Super Admin before jobseekers can see them.{" "}
+            <Link href="/pricing" className="font-medium underline">
+              Upgrade for instant approval →
+            </Link>
+          </p>
+        )}
+      </Card>
+
       {myJobs.length === 0 ? (
         <EmptyState title="No job postings yet" action={<Button onClick={() => setOpen(true)}>Post your first job</Button>} />
       ) : (
@@ -65,6 +85,7 @@ export default function EmployerJobPostings() {
               <div>
                 <div className="mb-1 flex items-center gap-2">
                   <Badge tone="sky">{job.type}</Badge>
+                  <StatusBadge status={job.moderation} />
                   <span className="text-xs text-zinc-400">Posted {timeAgo(job.postedAt)}</span>
                 </div>
                 <p className="text-sm font-semibold text-zinc-900">{job.title}</p>

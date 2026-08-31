@@ -1,4 +1,4 @@
-import { IsArray, IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsArray, IsEmail, IsInt, IsOptional, IsString, Max, Min, MinLength } from 'class-validator';
 
 export class RegisterJobseekerDto {
   @IsEmail()
@@ -24,4 +24,18 @@ export class RegisterJobseekerDto {
   @IsArray()
   @IsString({ each: true })
   skills?: string[];
+
+  @IsOptional()
+  @IsString()
+  category?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(60)
+  yearsOfExperience?: number;
+
+  @IsOptional()
+  @IsString()
+  preferredJobType?: string;
 }

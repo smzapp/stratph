@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
+import Link from "next/link";
 import { useApp } from "@/lib/store";
 import { getActivityForJobseeker, getCompletedMicroJobsCount, timeAgo } from "@/lib/helpers";
 import { Badge, Button, Card, Input, PageHeader } from "@/components/ui/Primitives";
@@ -17,12 +18,15 @@ const ACTIVITY_ICON: Record<ActivityType, string> = {
 export default function MyActivity() {
   const { db, currentUser, toggleDiscoverable, updateJobseekerSkills } = useApp();
   const [newSkill, setNewSkill] = useState("");
+  const [copied, setCopied] = useState(false);
 
   if (!currentUser) return null;
 
   const activity = getActivityForJobseeker(db, currentUser.id);
   const completed = getCompletedMicroJobsCount(db, currentUser.id);
   const skills = currentUser.skills || [];
+  const profileUrl =
+    typeof window !== "undefined" ? `${window.location.origin}/talent/${currentUser.id}` : "";
 
   function addSkill(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -38,6 +42,16 @@ export default function MyActivity() {
       currentUser.id,
       skills.filter((s) => s !== skill),
     );
+  }
+
+  async function copyProfileLink() {
+    try {
+      await navigator.clipboard.writeText(profileUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt("Copy your profile link:", profileUrl);
+    }
   }
 
   return (
@@ -74,12 +88,35 @@ export default function MyActivity() {
         </div>
       </Card>
 
+      <Card className="mb-6 border-indigo-100 bg-indigo-50/40">
+        <p className="text-sm font-semibold text-zinc-900">Share your profile</p>
+        <p className="mt-1 text-sm text-zinc-500">
+          Send this link to potential clients — anyone with it can view your showcase profile,
+          no account needed.
+        </p>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <div className="flex-1 truncate rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-600">
+            {profileUrl || "…"}
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={copyProfileLink} disabled={!profileUrl}>
+              {copied ? "Copied!" : "Copy link"}
+            </Button>
+            <Link href={`/talent/${currentUser.id}`} target="_blank">
+              <Button size="sm" variant="outline">
+                Preview
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <h2 className="mb-4 text-sm font-semibold text-zinc-900">Activity timeline</h2>
           {activity.length === 0 ? (
             <p className="text-sm text-zinc-400">
-              Complete a micro job to start building a verifiable track record.
+              Complete a Trial Task to start building a verifiable track record.
             </p>
           ) : (
             <ol className="space-y-4 border-l border-zinc-200 pl-4">
@@ -103,7 +140,7 @@ export default function MyActivity() {
           <Card>
             <h2 className="mb-1 text-sm font-semibold text-zinc-900">Verified track record</h2>
             <p className="text-2xl font-semibold text-indigo-600">{completed}</p>
-            <p className="text-xs text-zinc-400">micro jobs completed and approved</p>
+            <p className="text-xs text-zinc-400">Trial Tasks completed and approved</p>
           </Card>
 
           <Card>

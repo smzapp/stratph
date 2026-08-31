@@ -9,10 +9,11 @@ import { MicroJobsModule } from './micro-jobs/micro-jobs.module.js';
 import { JobsModule } from './jobs/jobs.module.js';
 import { OffersModule } from './offers/offers.module.js';
 import { ActivityModule } from './activity/activity.module.js';
-import { PaymentsModule } from './payments/payments.module.js';
 import { SettingsModule } from './settings/settings.module.js';
 import { BootstrapModule } from './bootstrap/bootstrap.module.js';
 import { SeedModule } from './seed/seed.module.js';
+import { NotificationsModule } from './notifications/notifications.module.js';
+import { ReportsModule } from './reports/reports.module.js';
 
 @Module({
   imports: [
@@ -32,10 +33,11 @@ import { SeedModule } from './seed/seed.module.js';
     JobsModule,
     OffersModule,
     ActivityModule,
-    PaymentsModule,
     SettingsModule,
     BootstrapModule,
     SeedModule,
+    NotificationsModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

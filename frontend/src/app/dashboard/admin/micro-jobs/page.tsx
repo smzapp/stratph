@@ -8,7 +8,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 
 const TABS = [
   { key: "pending", label: "Pending review" },
-  { key: "all", label: "All micro jobs" },
+  { key: "all", label: "All trial tasks" },
 ];
 
 export default function AdminMicroJobModeration() {
@@ -21,12 +21,12 @@ export default function AdminMicroJobModeration() {
 
   return (
     <div>
-      <PageHeader title="Micro Job Moderation" description="New postings need a quick review before jobseekers can see them." />
+      <PageHeader title="Trial Task Moderation" description="New postings need a quick review before jobseekers can see them." />
 
       <Card className="mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-zinc-900">Auto-approve new micro jobs</p>
+            <p className="text-sm font-semibold text-zinc-900">Auto-approve new trial tasks</p>
             <p className="mt-1 text-sm text-zinc-500">
               {settings?.microJobAutoApprove
                 ? "New postings go live immediately — no review needed."
@@ -64,7 +64,7 @@ export default function AdminMicroJobModeration() {
       </div>
 
       {microJobs.length === 0 ? (
-        <EmptyState title="Nothing here" description="No micro jobs match this filter." />
+        <EmptyState title="Nothing here" description="No trial tasks match this filter." />
       ) : (
         <div className="space-y-4">
           {microJobs.map((mj) => {

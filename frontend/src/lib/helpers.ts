@@ -90,6 +90,11 @@ export function getSkillGap(userSkills: string[], requiredSkills: string[]): Ski
   return { matched, missing, percent };
 }
 
+export function isSubscriptionActive(user?: User | null): boolean {
+  if (!user?.subscriptionPlan || !user.subscriptionExpiresAt) return false;
+  return new Date(user.subscriptionExpiresAt).getTime() > Date.now();
+}
+
 export function initials(name?: string | null): string {
   if (!name) return "?";
   return name

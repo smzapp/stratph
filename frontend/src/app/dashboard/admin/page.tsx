@@ -1,7 +1,7 @@
 "use client";
 
 import { useApp } from "@/lib/store";
-import { formatPeso, timeAgo } from "@/lib/helpers";
+import { timeAgo } from "@/lib/helpers";
 import { ROLES } from "@/lib/types";
 import { Avatar, Card, PageHeader, StatCard } from "@/components/ui/Primitives";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -9,12 +9,10 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 export default function AdminOverview() {
   const { db } = useApp();
 
-  const jobseekers = db.users.filter((u) => u.role === ROLES.JOBSEEKER).length;
+  const jobseekers = db.users.filter((u) => u.role === ROLES.JOBSEEKER);
   const employers = db.users.filter((u) => u.role === ROLES.EMPLOYER).length;
-  const gmv = db.payments.reduce((sum, p) => sum + p.amount, 0);
-  const inEscrow = db.payments
-    .filter((p) => p.status === "in_escrow")
-    .reduce((sum, p) => sum + p.amount, 0);
+  const totalProfileViews = jobseekers.reduce((sum, u) => sum + (u.profileViews ?? 0), 0);
+  const discoverableJobseekers = jobseekers.filter((u) => u.discoverable).length;
   const upgraded = db.microJobs.reduce(
     (sum, mj) => sum + mj.applicants.filter((a) => a.status === "upgraded").length,
     0,
@@ -31,18 +29,18 @@ export default function AdminOverview() {
 
   return (
     <div>
-      <PageHeader eyebrow="Super Admin" title="Platform overview" description="Health of the marketplace across both killer features." />
+      <PageHeader eyebrow="Super Admin" title="Platform overview" description="Health of the marketplace across every feature." />
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Jobseekers" value={jobseekers} tone="indigo" />
+        <StatCard label="Jobseekers" value={jobseekers.length} tone="indigo" />
         <StatCard label="Employers" value={employers} tone="emerald" />
         <StatCard label="Trial → hire conversion" value={`${conversionRate}%`} hint={`${upgraded} of ${totalApplications} applications`} tone="amber" />
         <StatCard label="Pending moderation" value={pendingModeration} tone="rose" />
       </div>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2">
-        <StatCard label="Gross paid through micro jobs" value={formatPeso(gmv)} tone="indigo" />
-        <StatCard label="Currently in escrow" value={formatPeso(inEscrow)} tone="amber" />
+        <StatCard label="Total profile views" value={totalProfileViews} tone="indigo" hint="Across all jobseeker profiles" />
+        <StatCard label="Discoverable jobseekers" value={discoverableJobseekers} tone="amber" hint="Visible in Reverse Hiring search" />
       </div>
 
       <Card>

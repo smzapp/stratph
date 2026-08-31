@@ -4,15 +4,18 @@ import { MicroJob } from './micro-job.entity.js';
 import { Applicant } from './applicant.entity.js';
 import { Offer } from '../offers/offer.entity.js';
 import { ActivityEntry } from '../activity/activity.entity.js';
-import { Payment } from '../payments/payment.entity.js';
 import { MicroJobsService } from './micro-jobs.service.js';
 import { MicroJobsController } from './micro-jobs.controller.js';
 import { SettingsModule } from '../settings/settings.module.js';
+import { UsersModule } from '../users/users.module.js';
+import { NotificationsModule } from '../notifications/notifications.module.js';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([MicroJob, Applicant, Offer, ActivityEntry, Payment]),
+    TypeOrmModule.forFeature([MicroJob, Applicant, Offer, ActivityEntry]),
     SettingsModule,
+    UsersModule,
+    NotificationsModule,
   ],
   controllers: [MicroJobsController],
   providers: [MicroJobsService],

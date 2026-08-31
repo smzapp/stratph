@@ -11,9 +11,15 @@ const MICRO_JOB_TICKETS: { title: string; pay: string; category: string; rotate:
 const AUDIENCES = ["Skilled Professionals", "Fresh Graduates", "Students", "Career Shifters"];
 
 const STEPS: { icon: string; title: string; body: string }[] = [
-  { icon: "🎯", title: "Try", body: "Take a small, paid task straight from the job listing — no interview required." },
-  { icon: "💪", title: "Prove", body: "Deliver real work. The employer reviews it and pays out either way — the ₱ is yours regardless of the outcome." },
+  { icon: "🎯", title: "Try", body: "Take a small task straight from the listing — no interview required. The employer's payment is already held in escrow." },
+  { icon: "💪", title: "Prove", body: "Deliver real work. Once the employer approves your submission, the escrowed ₱ is released straight to you." },
   { icon: "🚀", title: "Hire", body: "Nail it, and the employer can upgrade you to part-time, contract, or full-time on the spot." },
+];
+
+const ESCROW_STEPS: { icon: string; title: string; body: string }[] = [
+  { icon: "🔐", title: "Employer funds escrow", body: "A subscribed employer posts a Trial Task and its pay is held by StratPH — not sent directly to anyone yet." },
+  { icon: "📤", title: "Jobseeker delivers", body: "The jobseeker does the work and submits it for review. No money changes hands during this step." },
+  { icon: "✅", title: "Approve → release", body: "Employer approves the work and the held amount is released to the jobseeker instantly. Rejected work refunds the employer." },
 ];
 
 const OLD_WAY = [
@@ -27,15 +33,15 @@ const OLD_WAY = [
 const STRATPH_WAY = [
   "Take a ₱300–₱3,000 paid work trial — today",
   "Get reviewed on real, delivered work",
-  "Get paid whether or not you're hired further",
+  "Get paid securely once your work is approved — funds are held in escrow from day one",
   "See exactly which skills you're missing — not just a percentage",
   "Build a public track record employers can search",
 ];
 
 const DASHBOARDS: { icon: string; title: string; body: string; tone: "indigo" | "emerald" | "amber" }[] = [
-  { icon: "🧑‍💻", title: "Jobseeker", body: "Browse micro jobs, close your skill gaps, submit work, and track upgrade offers.", tone: "indigo" },
-  { icon: "🏢", title: "Employer", body: "Post paid work trials, review submissions, upgrade top performers, and search verified talent.", tone: "emerald" },
-  { icon: "🛡️", title: "Super Admin", body: "Moderate postings, verify employers, and watch trial-to-hire conversion across the platform.", tone: "amber" },
+  { icon: "🧑‍💻", title: "Jobseeker", body: "Browse Trial Tasks, close your skill gaps, submit work, and get paid the moment your submission is approved.", tone: "indigo" },
+  { icon: "🏢", title: "Employer", body: "Subscribe to post Trial Tasks, fund escrow per task, review submissions, and search verified talent.", tone: "emerald" },
+  { icon: "🛡️", title: "Super Admin", body: "Moderate postings, verify employers, resolve reports, and watch trial-to-hire conversion across the platform.", tone: "amber" },
 ];
 
 export default function Home() {
@@ -54,6 +60,7 @@ export default function Home() {
             <a href="#how-it-works" className="hover:text-zinc-900">How it works</a>
             <a href="#features" className="hover:text-zinc-900">Features</a>
             <a href="#dashboards" className="hover:text-zinc-900">Dashboards</a>
+            <Link href="/pricing" className="hover:text-zinc-900">Pricing</Link>
           </nav>
           <Link href="/login">
             <Button variant="outline" size="sm">Log in</Button>
@@ -106,7 +113,7 @@ export default function Home() {
                 </Badge>
               ))}
             </div>
-            <div className="mt-8 grid grid-cols-3 gap-6 border-t border-zinc-100 pt-6">
+            <div className="mt-8 grid grid-cols-2 gap-6 border-t border-zinc-100 pt-6 sm:grid-cols-4">
               <div>
                 <p className="text-2xl font-semibold text-zinc-900">₱300–₱3k</p>
                 <p className="text-xs text-zinc-400">per paid work trial</p>
@@ -114,6 +121,10 @@ export default function Home() {
               <div>
                 <p className="text-2xl font-semibold text-zinc-900">0</p>
                 <p className="text-xs text-zinc-400">interviews required</p>
+              </div>
+              <div>
+                <p className="text-2xl font-semibold text-zinc-900">🔒</p>
+                <p className="text-xs text-zinc-400">held in escrow until approved</p>
               </div>
               <div>
                 <p className="text-2xl font-semibold text-zinc-900">3</p>
@@ -243,6 +254,47 @@ export default function Home() {
         </div>
       </section>
 
+      {/* How escrow works */}
+      <section className="border-t border-zinc-100 bg-indigo-50/40 py-16">
+        <div className="mx-auto w-full max-w-6xl px-6">
+          <div className="mb-10 text-center">
+            <Badge tone="indigo">Escrow protected</Badge>
+            <h2 className="mt-3 text-2xl font-semibold text-zinc-900 sm:text-3xl">
+              Every Trial Task is funded before work starts
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-sm text-zinc-500">
+              Employers subscribe to post Trial Tasks. StratPH holds each task&apos;s pay so
+              jobseekers know it&apos;s real, and releases it the moment the employer approves the
+              work.
+            </p>
+          </div>
+          <div className="grid gap-6 sm:grid-cols-3">
+            {ESCROW_STEPS.map((step, i) => (
+              <div key={step.title} className="relative">
+                <div className="h-full rounded-2xl border border-indigo-100 bg-white p-6 shadow-sm">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-2xl">
+                    {step.icon}
+                  </div>
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-indigo-600">
+                    {i + 1}
+                  </p>
+                  <h3 className="mb-2 text-base font-semibold text-zinc-900">{step.title}</h3>
+                  <p className="text-sm text-zinc-500">{step.body}</p>
+                </div>
+                {i < ESCROW_STEPS.length - 1 ? (
+                  <span className="absolute -right-4 top-1/2 hidden -translate-y-1/2 text-xl text-indigo-200 sm:block">
+                    →
+                  </span>
+                ) : null}
+              </div>
+            ))}
+          </div>
+          <p className="mx-auto mt-6 max-w-xl text-center text-xs text-zinc-400">
+            Demo prototype — escrow is simulated within StratPH for illustration. No real funds move.
+          </p>
+        </div>
+      </section>
+
       {/* Killer features */}
       <section id="features" className="border-t border-zinc-100 bg-zinc-50/60 py-20">
         <div className="mx-auto w-full max-w-6xl px-6">
@@ -254,7 +306,7 @@ export default function Home() {
             <div>
               <Badge tone="indigo">Killer feature 01</Badge>
               <h3 className="mt-3 text-2xl font-semibold text-zinc-900">
-                Micro Jobs — a paid work trial before full-time
+                Trial Tasks — real work before full-time
               </h3>
               <p className="mt-3 text-zinc-600">
                 Convert a PDF to Excel. Fix one React component. Edit one video. Answer 20
@@ -264,9 +316,16 @@ export default function Home() {
               </p>
               <ul className="mt-4 space-y-2 text-sm text-zinc-600">
                 <li className="flex gap-2"><span className="text-indigo-500">✓</span> Juniors and fresh graduates get real, paid experience</li>
-                <li className="flex gap-2"><span className="text-indigo-500">✓</span> Employers reduce hiring risk</li>
+                <li className="flex gap-2"><span className="text-indigo-500">✓</span> Payment is held in escrow and released only on approval</li>
                 <li className="flex gap-2"><span className="text-indigo-500">✓</span> Every trial can convert instantly</li>
               </ul>
+              <p className="mt-4 text-xs text-zinc-400">
+                Posting requires a{" "}
+                <Link href="/pricing" className="font-medium text-indigo-600 underline">
+                  StratPH subscription
+                </Link>{" "}
+                — it&apos;s how we keep the marketplace and its escrow trustworthy.
+              </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               {MICRO_JOB_TICKETS.map((t) => (
@@ -314,7 +373,7 @@ export default function Home() {
               <p className="mt-3 text-zinc-600">
                 Other platforms tell you a vague match score and leave you guessing why you
                 weren&apos;t picked. StratPH tells you precisely which skills stand between you
-                and the role — and links each gap straight to a micro job that lets you prove it.
+                and the role — and links each gap straight to a Trial Task that lets you prove it.
               </p>
               <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm">
                 <p className="text-zinc-400 line-through decoration-2">&ldquo;You match 60%.&rdquo;</p>
@@ -325,7 +384,7 @@ export default function Home() {
               <ul className="mt-4 space-y-2 text-sm text-zinc-600">
                 <li className="flex gap-2"><span className="text-amber-500">✓</span> No more vague match percentages</li>
                 <li className="flex gap-2"><span className="text-amber-500">✓</span> A clear, ranked list of missing skills</li>
-                <li className="flex gap-2"><span className="text-amber-500">✓</span> One click from a missing skill to a micro job that builds it</li>
+                <li className="flex gap-2"><span className="text-amber-500">✓</span> One click from a missing skill to a Trial Task that builds it</li>
               </ul>
             </div>
             <div className="rounded-2xl border border-amber-200 bg-white p-6 shadow-sm">
@@ -345,7 +404,7 @@ export default function Home() {
                 <Badge tone="rose">CSS</Badge>
                 <Badge tone="rose">Git</Badge>
               </div>
-              <p className="text-xs text-emerald-600">✓ React already verified via a completed micro job</p>
+              <p className="text-xs text-emerald-600">✓ React already verified via a completed Trial Task</p>
             </div>
           </div>
         </div>
@@ -396,7 +455,8 @@ export default function Home() {
       </section>
 
       <footer className="border-t border-zinc-100 py-6 text-center text-xs text-zinc-400">
-        StratPH — UI prototype. No live payments or accounts are processed.
+        StratPH — UI prototype. Subscriptions and escrow are simulated for demonstration; no real
+        funds move.
       </footer>
     </div>
   );
@@ -415,7 +475,10 @@ function TicketCard({
       <div className="absolute -right-2 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-white ring-1 ring-inset ring-zinc-200" />
       <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">{ticket.category}</p>
       <p className="mt-1 text-sm font-semibold text-zinc-900">{ticket.title}</p>
-      <p className="mt-2 text-lg font-bold text-emerald-600">{ticket.pay}</p>
+      <div className="mt-2 flex items-center gap-1.5">
+        <p className="text-lg font-bold text-emerald-600">{ticket.pay}</p>
+        <span className="text-xs text-zinc-400" title="Held in escrow until approved">🔒</span>
+      </div>
     </div>
   );
 }

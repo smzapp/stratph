@@ -6,8 +6,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useApp } from "@/lib/store";
 import { formatDate } from "@/lib/helpers";
-import { Avatar, Badge, Button, Card, Input, Textarea } from "@/components/ui/Primitives";
+import { Avatar, Badge, Button, Card, Input, Select, Textarea } from "@/components/ui/Primitives";
 import type { Role } from "@/lib/types";
+import { CATEGORIES, JOB_TYPES } from "@/lib/constants";
 
 const ROLE_HOME: Record<Role, string> = {
   jobseeker: "/dashboard/jobseeker",
@@ -33,6 +34,9 @@ export default function ProfilePage() {
     location: "",
     bio: "",
     skills: "",
+    category: "",
+    yearsOfExperience: "",
+    preferredJobType: "",
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -53,6 +57,12 @@ export default function ProfilePage() {
       location: currentUser.location || "",
       bio: currentUser.bio || "",
       skills: (currentUser.skills || []).join(", "),
+      category: currentUser.category || "",
+      yearsOfExperience:
+        currentUser.yearsOfExperience !== undefined && currentUser.yearsOfExperience !== null
+          ? String(currentUser.yearsOfExperience)
+          : "",
+      preferredJobType: currentUser.preferredJobType || "",
     });
   }, [hydrated, currentUser, router]);
 
@@ -79,6 +89,9 @@ export default function ProfilePage() {
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean),
+      category: form.category,
+      yearsOfExperience: form.yearsOfExperience ? Number(form.yearsOfExperience) : undefined,
+      preferredJobType: form.preferredJobType,
     });
     setSaving(false);
     setSaved(true);
@@ -177,8 +190,42 @@ export default function ProfilePage() {
                   value={form.skills}
                   onChange={(e) => setForm({ ...form, skills: e.target.value })}
                 />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Select
+                    label="Category"
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  >
+                    <option value="">Choose one…</option>
+                    {CATEGORIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </Select>
+                  <Input
+                    label="Years of experience"
+                    type="number"
+                    min={0}
+                    max={60}
+                    value={form.yearsOfExperience}
+                    onChange={(e) => setForm({ ...form, yearsOfExperience: e.target.value })}
+                  />
+                </div>
+                <Select
+                  label="Preferred job type"
+                  value={form.preferredJobType}
+                  onChange={(e) => setForm({ ...form, preferredJobType: e.target.value })}
+                >
+                  <option value="">Choose one…</option>
+                  {JOB_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </Select>
                 <p className="text-xs text-zinc-400">
-                  Skills and discoverability also live under My Activity.
+                  Skills, discoverability, and your shareable profile link live under My Activity.
                 </p>
               </>
             ) : null}

@@ -10,8 +10,9 @@ import { OFFER_STATUSES } from "@/lib/types";
 
 const NAV: NavItem[] = [
   { href: "/dashboard/jobseeker", label: "Overview", icon: "🏠" },
-  { href: "/dashboard/jobseeker/micro-jobs", label: "Micro Jobs", icon: "⚡" },
+  { href: "/dashboard/jobseeker/micro-jobs", label: "Trial Tasks", icon: "⚡" },
   { href: "/dashboard/jobseeker/gap-analyzer", label: "Gap Analyzer", icon: "🧠" },
+  { href: "/dashboard/jobseeker/analytics", label: "Analytics", icon: "📊" },
   { href: "/dashboard/jobseeker/jobs", label: "Browse Jobs", icon: "🔎" },
   { href: "/dashboard/jobseeker/activity", label: "My Activity", icon: "📈" },
   { href: "/dashboard/jobseeker/offers", label: "Offers", icon: "🎉" },

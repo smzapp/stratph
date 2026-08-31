@@ -10,6 +10,7 @@ import { CreateMicroJobDto } from './dto/create-micro-job.dto.js';
 import { SubmitDeliverableDto } from './dto/submit-deliverable.dto.js';
 import { ReviewSubmissionDto } from './dto/review-submission.dto.js';
 import { UpgradeCandidateDto } from './dto/upgrade-candidate.dto.js';
+import { InviteCandidateDto } from './dto/invite-candidate.dto.js';
 import { ModerateDto } from './dto/moderate.dto.js';
 import type { User } from '../users/user.entity.js';
 
@@ -60,6 +61,20 @@ export class MicroJobsController {
     @Body() dto: UpgradeCandidateDto,
   ) {
     const microJob = await this.microJobsService.upgrade(id, jobseekerId, user.id, dto);
+    return serializeMicroJob(microJob);
+  }
+
+  @Roles(Role.EMPLOYER)
+  @Post(':id/invite')
+  async invite(@CurrentUser() user: User, @Param('id') id: string, @Body() dto: InviteCandidateDto) {
+    const microJob = await this.microJobsService.invite(id, user.id, dto);
+    return serializeMicroJob(microJob);
+  }
+
+  @Roles(Role.EMPLOYER)
+  @Patch(':id/close')
+  async close(@CurrentUser() user: User, @Param('id') id: string) {
+    const microJob = await this.microJobsService.close(id, user.id);
     return serializeMicroJob(microJob);
   }
 

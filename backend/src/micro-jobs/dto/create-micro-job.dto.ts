@@ -1,4 +1,4 @@
-import { IsArray, IsInt, IsString, Max, Min } from 'class-validator';
+import { IsArray, IsInt, IsISO8601, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class CreateMicroJobDto {
   @IsString()
@@ -24,4 +24,20 @@ export class CreateMicroJobDto {
   @IsArray()
   @IsString({ each: true })
   skillsRequired!: string[];
+
+  @IsOptional()
+  @IsISO8601()
+  expiresAt?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(60)
+  minYearsOfExperience?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  minProfileCompleteness?: number;
 }

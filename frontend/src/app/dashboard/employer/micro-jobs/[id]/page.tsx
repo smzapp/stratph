@@ -27,9 +27,9 @@ export default function EmployerMicroJobDetail() {
   if (!microJob) {
     return (
       <Card>
-        <p className="text-sm text-zinc-500">Micro job not found.</p>
+        <p className="text-sm text-zinc-500">Trial task not found.</p>
         <Link href="/dashboard/employer/micro-jobs" className="mt-3 inline-block text-sm text-indigo-600">
-          ← Back to micro jobs
+          ← Back to trial tasks
         </Link>
       </Card>
     );
@@ -38,7 +38,7 @@ export default function EmployerMicroJobDetail() {
   function openUpgrade(jobseekerId: string) {
     setUpgradeTarget(jobseekerId);
     setOfferType(UPGRADE_TYPES[0]);
-    setOfferMessage("Great work on the micro job — want to keep going with us?");
+    setOfferMessage("Great work on the trial task — want to keep going with us?");
   }
 
   function confirmUpgrade() {
@@ -59,7 +59,7 @@ export default function EmployerMicroJobDetail() {
             <Badge tone="indigo">{microJob.category}</Badge>
             <h1 className="mt-2 text-lg font-semibold text-zinc-900">{microJob.title}</h1>
             <p className="mt-1 text-sm text-zinc-500">
-              {formatPeso(microJob.pay)} · {microJob.estimatedTime}
+              {formatPeso(microJob.pay)} held in escrow · {microJob.estimatedTime}
             </p>
           </div>
           <StatusBadge status={microJob.status} />
@@ -141,7 +141,7 @@ export default function EmployerMicroJobDetail() {
                           )
                         }
                       >
-                        Approve & release pay
+                        Approve &amp; release {formatPeso(microJob.pay)}
                       </Button>
                       <Button
                         size="sm"

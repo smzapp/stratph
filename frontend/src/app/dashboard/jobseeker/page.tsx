@@ -24,9 +24,7 @@ export default function JobseekerOverview() {
     (o) => o.status === OFFER_STATUSES.PENDING,
   );
   const completed = getCompletedMicroJobsCount(db, currentUser.id);
-  const earned = db.payments
-    .filter((p) => p.jobseekerId === currentUser.id && p.status === "released")
-    .reduce((sum, p) => sum + p.amount, 0);
+  const profileViews = currentUser.profileViews ?? 0;
   const openMicroJobs = db.microJobs.filter(
     (mj) => mj.status === "open" && mj.moderation === "approved",
   ).length;
@@ -36,10 +34,10 @@ export default function JobseekerOverview() {
       <PageHeader
         eyebrow="Jobseeker"
         title={`Welcome back, ${currentUser.name.split(" ")[0]}`}
-        description="Micro jobs are short, paid work trials — deliver great work and an employer can upgrade you instantly."
+        description="Trial Tasks are short, paid work trials — deliver great work and an employer can upgrade you instantly."
         actions={
           <Link href="/dashboard/jobseeker/micro-jobs">
-            <Button>Browse micro jobs</Button>
+            <Button>Browse Trial Tasks</Button>
           </Link>
         }
       />
@@ -53,7 +51,7 @@ export default function JobseekerOverview() {
                 waiting
               </p>
               <p className="mt-0.5 text-sm text-amber-700">
-                An employer wants to move you from a micro job into ongoing work.
+                An employer wants to move you from a Trial Task into ongoing work.
               </p>
             </div>
             <Link href="/dashboard/jobseeker/offers">
@@ -64,10 +62,10 @@ export default function JobseekerOverview() {
       ) : null}
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Micro jobs completed" value={completed} tone="indigo" />
-        <StatCard label="Total earned" value={formatPeso(earned)} tone="emerald" />
+        <StatCard label="Trial Tasks completed" value={completed} tone="indigo" />
+        <StatCard label="Profile views" value={profileViews} tone="emerald" hint="See Analytics for more" />
         <StatCard label="Active applications" value={applications.length} tone="amber" />
-        <StatCard label="Open micro jobs" value={openMicroJobs} hint="Available right now" tone="rose" />
+        <StatCard label="Open Trial Tasks" value={openMicroJobs} hint="Available right now" tone="rose" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -75,16 +73,16 @@ export default function JobseekerOverview() {
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-zinc-900">Your applications</h2>
             <Link href="/dashboard/jobseeker/micro-jobs" className="text-xs font-medium text-indigo-600">
-              View all micro jobs
+              View all Trial Tasks
             </Link>
           </div>
           {applications.length === 0 ? (
             <EmptyState
               title="No applications yet"
-              description="Apply to a micro job to start building your track record."
+              description="Apply to a Trial Task to start building your track record."
               action={
                 <Link href="/dashboard/jobseeker/micro-jobs">
-                  <Button size="sm">Find a micro job</Button>
+                  <Button size="sm">Find a Trial Task</Button>
                 </Link>
               }
             />
@@ -106,7 +104,7 @@ export default function JobseekerOverview() {
         <Card>
           <h2 className="mb-4 text-sm font-semibold text-zinc-900">Recent activity</h2>
           {activity.length === 0 ? (
-            <p className="text-sm text-zinc-400">Nothing yet — completed micro jobs show up here.</p>
+            <p className="text-sm text-zinc-400">Nothing yet — completed Trial Tasks show up here.</p>
           ) : (
             <ul className="space-y-3">
               {activity.map((a) => (

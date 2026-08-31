@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useApp } from "@/lib/store";
 import { Avatar, Badge } from "@/components/ui/Primitives";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import type { Role, Tone } from "@/lib/types";
 
 export interface NavItem {
@@ -74,7 +75,10 @@ export function DashboardShell({ navItems, children }: { navItems: NavItem[]; ch
             <span className="text-sm font-semibold text-zinc-900">StratPH</span>
           </div>
           <div className="hidden md:block" />
-          <UserMenu />
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <UserMenu />
+          </div>
         </header>
         <main className="flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
         <nav className="flex items-center justify-around border-t border-zinc-200 bg-white py-2 md:hidden">

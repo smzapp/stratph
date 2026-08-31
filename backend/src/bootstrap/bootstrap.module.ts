@@ -5,10 +5,9 @@ import { MicroJobsModule } from '../micro-jobs/micro-jobs.module.js';
 import { JobsModule } from '../jobs/jobs.module.js';
 import { ActivityModule } from '../activity/activity.module.js';
 import { OffersModule } from '../offers/offers.module.js';
-import { PaymentsModule } from '../payments/payments.module.js';
 
 @Module({
-  imports: [UsersModule, MicroJobsModule, JobsModule, ActivityModule, OffersModule, PaymentsModule],
+  imports: [UsersModule, MicroJobsModule, JobsModule, ActivityModule, OffersModule],
   controllers: [BootstrapController],
 })
 export class BootstrapModule {}

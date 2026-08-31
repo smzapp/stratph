@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { apiFetch, ApiError, getToken, setToken } from "./api";
+import { connectSocket, disconnectSocket } from "./socket";
 import { ROLES, APPLICANT_STATUSES, MICRO_JOB_STATUSES, OFFER_STATUSES } from "./types";
 import type {
   AppContextValue,
@@ -11,18 +12,21 @@ import type {
   ModerationStatus,
   NewJobInput,
   NewMicroJobInput,
+  Notification,
   OfferStatus,
   OfferType,
   PlatformSettings,
   ProfilePatch,
   RegisterEmployerInput,
   RegisterJobseekerInput,
+  ReportReason,
+  SubscriptionPlan,
   User,
   UserStatus,
 } from "./types";
 import type { ApplicantStatus } from "./types";
 
-const EMPTY_DB: AppDb = { users: [], microJobs: [], jobs: [], activity: [], offers: [], payments: [] };
+const EMPTY_DB: AppDb = { users: [], microJobs: [], jobs: [], activity: [], offers: [] };
 
 const AppContext = createContext<AppContextValue | null>(null);
 
@@ -42,6 +46,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<PlatformSettings | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const loadAll = useCallback(async () => {
     const [bootstrap, settingsResp] = await Promise.all([
@@ -50,6 +55,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ]);
     setDb(bootstrap);
     setSettings(settingsResp);
+  }, []);
+
+  const loadNotifications = useCallback(async () => {
+    try {
+      const res = await apiFetch<Notification[]>("/notifications");
+      setNotifications(res);
+    } catch {
+      // ignore — notifications are best-effort
+    }
+  }, []);
+
+  const connectRealtime = useCallback((token: string) => {
+    const socket = connectSocket(token);
+    socket.off("notification").on("notification", (n: Notification) => {
+      setNotifications((prev) => [n, ...prev]);
+    });
   }, []);
 
   const refresh = useCallback(async () => {
@@ -69,7 +90,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const me = await apiFetch<User>("/auth/me");
         if (cancelled) return;
         setUserId(me.id);
-        await loadAll();
+        await Promise.all([loadAll(), loadNotifications()]);
+        connectRealtime(token);
       } catch {
         setToken(null);
       } finally {
@@ -80,7 +102,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [loadAll]);
+  }, [loadAll, loadNotifications, connectRealtime]);
 
   const currentUser = useMemo(() => db.users.find((u) => u.id === userId) || null, [db.users, userId]);
 
@@ -88,10 +110,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async (res: AuthResponse): Promise<LoginResult> => {
       setToken(res.accessToken);
       setUserId(res.user.id);
-      await loadAll();
+      await Promise.all([loadAll(), loadNotifications()]);
+      connectRealtime(res.accessToken);
       return { ok: true, user: res.user };
     },
-    [loadAll],
+    [loadAll, loadNotifications, connectRealtime],
   );
 
   const actions = useMemo(
@@ -137,6 +160,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setUserId(null);
         setDb(EMPTY_DB);
         setSettings(null);
+        setNotifications([]);
+        disconnectSocket();
       },
 
       refresh,
@@ -262,6 +287,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setUserId(null);
           setDb(EMPTY_DB);
           setSettings(null);
+          setNotifications([]);
+          disconnectSocket();
         }
       },
 
@@ -298,6 +325,123 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       },
 
+      async closeMicroJob(microJobId: string) {
+        try {
+          await apiFetch(`/micro-jobs/${microJobId}/close`, { method: "PATCH" });
+          await loadAll();
+        } catch (err) {
+          window.alert(errorMessage(err));
+        }
+      },
+
+      async adminModerateJob(jobId: string, moderation: ModerationStatus) {
+        try {
+          await apiFetch(`/jobs/${jobId}/moderate`, {
+            method: "PATCH",
+            body: JSON.stringify({ moderation }),
+          });
+          await loadAll();
+        } catch (err) {
+          window.alert(errorMessage(err));
+        }
+      },
+
+      async adminSetSubscription(targetUserId: string, plan: SubscriptionPlan | null) {
+        try {
+          await apiFetch(`/users/${targetUserId}/subscription`, {
+            method: "PATCH",
+            body: JSON.stringify({ plan }),
+          });
+          await loadAll();
+        } catch (err) {
+          window.alert(errorMessage(err));
+        }
+      },
+
+      async subscribeToPlan(plan: SubscriptionPlan) {
+        try {
+          await apiFetch("/me/subscribe", { method: "POST", body: JSON.stringify({ plan }) });
+          await loadAll();
+        } catch (err) {
+          window.alert(errorMessage(err));
+        }
+      },
+
+      async cancelSubscription() {
+        try {
+          await apiFetch("/me/cancel-subscription", { method: "POST" });
+          await loadAll();
+        } catch (err) {
+          window.alert(errorMessage(err));
+        }
+      },
+
+      async markNotificationRead(id: string) {
+        setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+        try {
+          await apiFetch(`/notifications/${id}/read`, { method: "PATCH" });
+        } catch {
+          // ignore
+        }
+      },
+
+      async markAllNotificationsRead() {
+        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+        try {
+          await apiFetch("/notifications/read-all", { method: "PATCH" });
+        } catch {
+          // ignore
+        }
+      },
+
+      async inviteToMicroJob(microJobId: string, jobseekerId: string) {
+        try {
+          await apiFetch(`/micro-jobs/${microJobId}/invite`, {
+            method: "POST",
+            body: JSON.stringify({ jobseekerId }),
+          });
+          await loadAll();
+          return true;
+        } catch (err) {
+          window.alert(errorMessage(err));
+          return false;
+        }
+      },
+
+      async contactJobseeker(jobseekerId: string, message: string) {
+        try {
+          await apiFetch(`/users/${jobseekerId}/contact`, {
+            method: "POST",
+            body: JSON.stringify({ message }),
+          });
+          return true;
+        } catch (err) {
+          window.alert(errorMessage(err));
+          return false;
+        }
+      },
+
+      async reportUser(reportedUserId: string, reason: ReportReason, details?: string, contextLabel?: string) {
+        try {
+          await apiFetch("/reports", {
+            method: "POST",
+            body: JSON.stringify({ reportedUserId, reason, details, contextLabel }),
+          });
+          return true;
+        } catch (err) {
+          window.alert(errorMessage(err));
+          return false;
+        }
+      },
+
+      async adminResolveReport(reportId: string) {
+        try {
+          await apiFetch(`/reports/${reportId}/resolve`, { method: "PATCH" });
+        } catch (err) {
+          window.alert(errorMessage(err));
+        }
+      },
+
       async updateSettings(patch: Partial<Pick<PlatformSettings, "microJobAutoApprove">>) {
         try {
           await apiFetch("/settings", { method: "PATCH", body: JSON.stringify(patch) });
@@ -306,13 +450,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
           window.alert(errorMessage(err));
         }
       },
+
+      async recordProfileView(targetUserId: string) {
+        // Best-effort analytics ping — never interrupt the viewer with an error.
+        try {
+          await apiFetch(`/users/${targetUserId}/view`, { method: "POST" });
+        } catch {
+          // ignore
+        }
+      },
     }),
     [db.users, userId, loadAll, refresh, afterAuth],
   );
 
+  const unreadNotificationCount = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications],
+  );
+
   const value: AppContextValue = useMemo(
-    () => ({ db, settings, currentUser, hydrated, ...actions }),
-    [db, settings, currentUser, hydrated, actions],
+    () => ({ db, settings, currentUser, hydrated, notifications, unreadNotificationCount, ...actions }),
+    [db, settings, currentUser, hydrated, notifications, unreadNotificationCount, actions],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

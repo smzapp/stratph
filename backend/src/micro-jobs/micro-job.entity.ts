@@ -40,6 +40,24 @@ export class MicroJob {
 
   @Column({ type: 'varchar', default: ModerationStatus.PENDING })
   moderation!: ModerationStatus;
+
+  @Column({ type: 'datetime', nullable: true })
+  expiresAt!: Date | null;
+
+  @Column({ type: 'int', nullable: true })
+  minYearsOfExperience!: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  minProfileCompleteness!: number | null;
+}
+
+// The persisted `status` only ever transitions between OPEN and CLOSED —
+// "expired" is derived at read time from `expiresAt` so we don't need a
+// background job to flip it.
+export function computeMicroJobStatus(mj: Pick<MicroJob, 'status' | 'expiresAt'>): MicroJobStatus {
+  if (mj.status === MicroJobStatus.CLOSED) return MicroJobStatus.CLOSED;
+  if (mj.expiresAt && new Date(mj.expiresAt).getTime() < Date.now()) return MicroJobStatus.EXPIRED;
+  return mj.status;
 }
 
 export function serializeMicroJob(mj: MicroJob & { applicants: Applicant[] }) {
@@ -53,9 +71,12 @@ export function serializeMicroJob(mj: MicroJob & { applicants: Applicant[] }) {
     pay: mj.pay,
     estimatedTime: mj.estimatedTime,
     skillsRequired: mj.skillsRequired,
-    status: mj.status,
+    status: computeMicroJobStatus(mj),
     createdAt: mj.createdAt,
     moderation: mj.moderation,
+    expiresAt: mj.expiresAt,
+    minYearsOfExperience: mj.minYearsOfExperience,
+    minProfileCompleteness: mj.minProfileCompleteness,
     applicants: (mj.applicants || []).map(serializeApplicant),
   };
 }
