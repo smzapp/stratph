@@ -1,0 +1,46 @@
+# This is a two-package repo (backend/ + frontend/); each package also has
+# its own .gitignore. These are repo-wide safety nets / root-level extras.
+
+# Dependencies
+**/node_modules
+
+# Build output
+frontend/.next/
+frontend/out/
+backend/dist/
+backend/build/
+**/build/
+**/coverage
+**/.nyc_output
+
+# Env files
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Logs
+**/*.log
+**/npm-debug.log*
+**/pnpm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/lerna-debug.log*
+
+# OS
+**/.DS_Store
+Thumbs.db
+
+# Editors / IDEs
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.sublime-workspace
+
+# TypeScript / Next.js misc
+**/*.tsbuildinfo
+frontend/next-env.d.ts
+**/.vercel
+
+# Claude Code local settings (personal overrides, not shared)
+.claude/settings.local.json
