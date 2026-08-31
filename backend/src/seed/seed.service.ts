@@ -1,0 +1,471 @@
+import { Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import * as bcrypt from 'bcryptjs';
+import { User } from '../users/user.entity.js';
+import { MicroJob } from '../micro-jobs/micro-job.entity.js';
+import { Applicant } from '../micro-jobs/applicant.entity.js';
+import { Job } from '../jobs/job.entity.js';
+import { ActivityEntry } from '../activity/activity.entity.js';
+import { Offer } from '../offers/offer.entity.js';
+import { Payment } from '../payments/payment.entity.js';
+import {
+  ActivityType,
+  ApplicantStatus,
+  MicroJobStatus,
+  ModerationStatus,
+  OfferStatus,
+  PaymentStatus,
+  Role,
+  UserStatus,
+} from '../common/enums.js';
+
+const DEMO_PASSWORD = 'test1234';
+
+@Injectable()
+export class SeedService implements OnApplicationBootstrap {
+  private readonly logger = new Logger(SeedService.name);
+
+  constructor(
+    @InjectRepository(User) private readonly usersRepo: Repository<User>,
+    @InjectRepository(MicroJob) private readonly microJobsRepo: Repository<MicroJob>,
+    @InjectRepository(Applicant) private readonly applicantsRepo: Repository<Applicant>,
+    @InjectRepository(Job) private readonly jobsRepo: Repository<Job>,
+    @InjectRepository(ActivityEntry) private readonly activityRepo: Repository<ActivityEntry>,
+    @InjectRepository(Offer) private readonly offersRepo: Repository<Offer>,
+    @InjectRepository(Payment) private readonly paymentsRepo: Repository<Payment>,
+  ) {}
+
+  async onApplicationBootstrap(): Promise<void> {
+    const existing = await this.usersRepo.count();
+    if (existing > 0) {
+      this.logger.log('Database already seeded, skipping.');
+      return;
+    }
+    this.logger.log('Seeding demo data...');
+    await this.seed();
+    this.logger.log('Seed complete.');
+  }
+
+  private async seed(): Promise<void> {
+    const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
+    const d = (s: string) => new Date(s);
+
+    await this.usersRepo.save(
+      this.usersRepo.create({
+        email: 'admin@test.com',
+        passwordHash,
+        role: Role.ADMIN,
+        name: 'Admin',
+        status: UserStatus.ACTIVE,
+        createdAt: d('2026-01-05T08:00:00Z'),
+      }),
+    );
+
+    const employer1 = await this.usersRepo.save(
+      this.usersRepo.create({
+        email: 'employer@test.com',
+        passwordHash,
+        role: Role.EMPLOYER,
+        name: 'Marga Santos',
+        companyName: 'BrightHive Solutions',
+        companyBlurb: 'Remote-first SaaS studio building tools for LGUs.',
+        verified: true,
+        status: UserStatus.ACTIVE,
+        createdAt: d('2026-01-10T08:00:00Z'),
+      }),
+    );
+
+    const employer2 = await this.usersRepo.save(
+      this.usersRepo.create({
+        email: 'hiring@cebutechworks.ph',
+        passwordHash,
+        role: Role.EMPLOYER,
+        name: 'Rafael Uy',
+        companyName: 'Cebu TechWorks',
+        companyBlurb: 'Outsourced dev + QA teams for AU/US clients.',
+        verified: true,
+        status: UserStatus.ACTIVE,
+        createdAt: d('2026-01-14T08:00:00Z'),
+      }),
+    );
+
+    await this.usersRepo.save(
+      this.usersRepo.create({
+        email: 'team@mangohealth.io',
+        passwordHash,
+        role: Role.EMPLOYER,
+        name: 'Dana Reyes',
+        companyName: 'MangoHealth',
+        companyBlurb: 'Telehealth startup, Manila + Singapore.',
+        verified: false,
+        status: UserStatus.ACTIVE,
+        createdAt: d('2026-02-01T08:00:00Z'),
+      }),
+    );
+
+    const jobseeker1 = await this.usersRepo.save(
+      this.usersRepo.create({
+        email: 'jobseeker@test.com',
+        passwordHash,
+        role: Role.JOBSEEKER,
+        name: 'Juan Dela Cruz',
+        headline: 'Frontend Developer • React & Next.js',
+        location: 'Quezon City, NCR',
+        skills: ['React', 'Next.js', 'Tailwind CSS', 'AWS', 'TypeScript'],
+        bio: '3 years building customer dashboards. Learning cloud deploys via micro jobs.',
+        discoverable: true,
+        status: UserStatus.ACTIVE,
+        createdAt: d('2026-01-12T08:00:00Z'),
+      }),
+    );
+
+    const jobseeker2 = await this.usersRepo.save(
+      this.usersRepo.create({
+        email: 'kim.alvarez@example.com',
+        passwordHash,
+        role: Role.JOBSEEKER,
+        name: 'Kim Alvarez',
+        headline: 'Virtual Assistant • Customer Support',
+        location: 'Davao City',
+        skills: ['Customer Support', 'Zendesk', 'Excel', 'Email Handling'],
+        bio: 'Ex-BPO team lead, 5 years. Fast, accurate, night-shift ready.',
+        discoverable: true,
+        status: UserStatus.ACTIVE,
+        createdAt: d('2026-01-18T08:00:00Z'),
+      }),
+    );
+
+    await this.usersRepo.save(
+      this.usersRepo.create({
+        email: 'paolo.reyes@example.com',
+        passwordHash,
+        role: Role.JOBSEEKER,
+        name: 'Paolo Reyes',
+        headline: 'Video Editor • Reels & YouTube',
+        location: 'Cebu City',
+        skills: ['Premiere Pro', 'After Effects', 'Video Editing'],
+        bio: 'Editing short-form content for PH brands for 2 years.',
+        discoverable: false,
+        status: UserStatus.ACTIVE,
+        createdAt: d('2026-02-02T08:00:00Z'),
+      }),
+    );
+
+    const jobseeker4 = await this.usersRepo.save(
+      this.usersRepo.create({
+        email: 'liza.tan@example.com',
+        passwordHash,
+        role: Role.JOBSEEKER,
+        name: 'Liza Tan',
+        headline: 'Backend Developer • Node & AWS',
+        location: 'Pasig, NCR',
+        skills: ['Node.js', 'AWS', 'PostgreSQL', 'Docker'],
+        bio: 'Deploying side projects to AWS to build a public track record.',
+        discoverable: true,
+        status: UserStatus.ACTIVE,
+        createdAt: d('2026-02-10T08:00:00Z'),
+      }),
+    );
+
+    // Micro jobs
+    const mj1 = await this.microJobsRepo.save(
+      this.microJobsRepo.create({
+        employerId: employer1.id,
+        title: 'Fix one broken React date-picker component',
+        category: 'Web Development',
+        description:
+          "Our booking form's date-picker breaks on mobile Safari. Fix the component and submit a PR-style diff.",
+        deliverable: 'Link to the fixed component code + a short before/after clip.',
+        pay: 1500,
+        estimatedTime: '4 hours',
+        skillsRequired: ['React', 'CSS'],
+        status: MicroJobStatus.OPEN,
+        moderation: ModerationStatus.APPROVED,
+        createdAt: d('2026-08-10T03:00:00Z'),
+      }),
+    );
+    await this.applicantsRepo.save(
+      this.applicantsRepo.create({
+        microJobId: mj1.id,
+        jobseekerId: jobseeker1.id,
+        status: ApplicantStatus.APPROVED,
+        appliedAt: d('2026-08-11T02:00:00Z'),
+        submissionNote:
+          'Rewrote the date-picker with a controlled value and fixed the iOS Safari z-index bug.',
+        submissionLink: 'https://github.com/example/fix-datepicker/pull/12',
+        submittedAt: d('2026-08-11T09:00:00Z'),
+        feedback: 'Clean fix, tested it myself on an iPhone. Great work.',
+        reviewedAt: d('2026-08-12T01:00:00Z'),
+      }),
+    );
+
+    const mj2 = await this.microJobsRepo.save(
+      this.microJobsRepo.create({
+        employerId: employer1.id,
+        title: 'Convert 40-page PDF report into an Excel workbook',
+        category: 'Data Entry',
+        description:
+          'We have a scanned PDF financial report. Need clean, formula-linked Excel tabs (no flattened numbers).',
+        deliverable: 'The .xlsx file with a short summary of tabs/formulas.',
+        pay: 800,
+        estimatedTime: '1 day',
+        skillsRequired: ['Excel', 'Data Entry'],
+        status: MicroJobStatus.OPEN,
+        moderation: ModerationStatus.APPROVED,
+        createdAt: d('2026-08-20T03:00:00Z'),
+      }),
+    );
+    await this.applicantsRepo.save(
+      this.applicantsRepo.create({
+        microJobId: mj2.id,
+        jobseekerId: jobseeker2.id,
+        status: ApplicantStatus.SUBMITTED,
+        appliedAt: d('2026-08-21T02:00:00Z'),
+        submissionNote:
+          'Workbook attached with 4 tabs, formulas linked, flagged 2 unreadable pages for review.',
+        submissionLink: 'https://drive.example.com/report.xlsx',
+        submittedAt: d('2026-08-22T05:00:00Z'),
+      }),
+    );
+
+    await this.microJobsRepo.save(
+      this.microJobsRepo.create({
+        employerId: employer2.id,
+        title: 'Edit one 60-second product reel',
+        category: 'Video Editing',
+        description: 'Raw clips + a voice-over track are ready. Need captions, jump cuts, and brand outro.',
+        deliverable: 'MP4 export + project file link.',
+        pay: 1200,
+        estimatedTime: '6 hours',
+        skillsRequired: ['Video Editing', 'Premiere Pro'],
+        status: MicroJobStatus.OPEN,
+        moderation: ModerationStatus.APPROVED,
+        createdAt: d('2026-08-24T03:00:00Z'),
+      }),
+    );
+
+    const mj4 = await this.microJobsRepo.save(
+      this.microJobsRepo.create({
+        employerId: employer2.id,
+        title: 'Answer 20 customer support emails (backlog clear-out)',
+        category: 'Customer Support',
+        description:
+          'Backlog of 20 tickets in Zendesk about shipping delays. Use our macros, escalate anything unusual.',
+        deliverable: '20 tickets marked resolved/escalated with your notes.',
+        pay: 600,
+        estimatedTime: '3 hours',
+        skillsRequired: ['Customer Support', 'Zendesk'],
+        status: MicroJobStatus.OPEN,
+        moderation: ModerationStatus.APPROVED,
+        createdAt: d('2026-08-27T03:00:00Z'),
+      }),
+    );
+    await this.applicantsRepo.save(
+      this.applicantsRepo.create({
+        microJobId: mj4.id,
+        jobseekerId: jobseeker2.id,
+        status: ApplicantStatus.UPGRADED,
+        appliedAt: d('2026-07-01T02:00:00Z'),
+        submissionNote: 'Cleared all 20 tickets, flagged 3 for refund policy exceptions.',
+        submissionLink: 'https://zendesk.example.com/view/backlog-aug',
+        submittedAt: d('2026-07-01T08:00:00Z'),
+        feedback: "Fastest turnaround we've had. Bringing her on part-time.",
+        reviewedAt: d('2026-07-02T01:00:00Z'),
+      }),
+    );
+
+    await this.microJobsRepo.save(
+      this.microJobsRepo.create({
+        employerId: (await this.usersRepo.findOneOrFail({ where: { email: 'team@mangohealth.io' } })).id,
+        title: "Write one blog post: 'Telehealth in Rural PH'",
+        category: 'Writing',
+        description: '800-1000 word blog post, SEO-friendly, casual but credible tone.',
+        deliverable: 'Google Doc link, ready to publish.',
+        pay: 900,
+        estimatedTime: '1 day',
+        skillsRequired: ['Writing', 'SEO'],
+        status: MicroJobStatus.OPEN,
+        moderation: ModerationStatus.PENDING,
+        createdAt: d('2026-08-28T03:00:00Z'),
+      }),
+    );
+
+    const mj6 = await this.microJobsRepo.save(
+      this.microJobsRepo.create({
+        employerId: employer1.id,
+        title: 'Deploy a small Node API to AWS (ECS or Lambda)',
+        category: 'Web Development',
+        description:
+          'We have a working Node API locally. Need it containerized and deployed to AWS with a health check endpoint live.',
+        deliverable: 'Live URL + short writeup of the AWS setup.',
+        pay: 3000,
+        estimatedTime: '2 days',
+        skillsRequired: ['Node.js', 'AWS', 'Docker'],
+        status: MicroJobStatus.OPEN,
+        moderation: ModerationStatus.APPROVED,
+        createdAt: d('2026-08-05T03:00:00Z'),
+      }),
+    );
+    await this.applicantsRepo.save(
+      this.applicantsRepo.create({
+        microJobId: mj6.id,
+        jobseekerId: jobseeker4.id,
+        status: ApplicantStatus.APPROVED,
+        appliedAt: d('2026-08-06T02:00:00Z'),
+        submissionNote: 'Deployed via ECS Fargate behind an ALB, health check green, added CloudWatch alarms.',
+        submissionLink: 'https://api.example-demo.com/health',
+        submittedAt: d('2026-08-08T10:00:00Z'),
+        feedback: 'Exactly what we needed. Want to talk contract work?',
+        reviewedAt: d('2026-08-09T02:00:00Z'),
+      }),
+    );
+
+    // Regular job postings
+    await this.jobsRepo.save(
+      this.jobsRepo.create({
+        employerId: employer1.id,
+        title: 'Frontend Developer (React)',
+        type: 'Full-time',
+        location: 'Remote (PH)',
+        salaryRange: '₱45,000 - ₱65,000 / month',
+        skillsRequired: ['React', 'JavaScript', 'CSS', 'Git'],
+        applicants: 12,
+        status: 'open',
+        postedAt: d('2026-08-15T03:00:00Z'),
+      }),
+    );
+    await this.jobsRepo.save(
+      this.jobsRepo.create({
+        employerId: employer2.id,
+        title: 'Customer Support Specialist',
+        type: 'Part-time',
+        location: 'Cebu / Remote',
+        salaryRange: '₱18,000 - ₱25,000 / month',
+        skillsRequired: ['Customer Support', 'Zendesk', 'Excel', 'Communication'],
+        applicants: 27,
+        status: 'open',
+        postedAt: d('2026-08-18T03:00:00Z'),
+      }),
+    );
+    await this.jobsRepo.save(
+      this.jobsRepo.create({
+        employerId: (await this.usersRepo.findOneOrFail({ where: { email: 'team@mangohealth.io' } })).id,
+        title: 'Backend Engineer (Node.js/AWS)',
+        type: 'Full-time',
+        location: 'Remote (PH)',
+        salaryRange: '₱60,000 - ₱90,000 / month',
+        skillsRequired: ['Node.js', 'AWS', 'PostgreSQL', 'Docker', 'TypeScript'],
+        applicants: 8,
+        status: 'open',
+        postedAt: d('2026-08-22T03:00:00Z'),
+      }),
+    );
+
+    // Activity
+    await this.activityRepo.save([
+      this.activityRepo.create({
+        jobseekerId: jobseeker1.id,
+        type: ActivityType.MICRO_JOB_COMPLETED,
+        skill: 'React',
+        title: 'Fixed one React date-picker component',
+        date: d('2026-08-12T01:00:00Z'),
+      }),
+      this.activityRepo.create({
+        jobseekerId: jobseeker1.id,
+        type: ActivityType.PROFILE_UPDATE,
+        skill: 'TypeScript',
+        title: 'Added TypeScript to skill list',
+        date: d('2026-08-15T01:00:00Z'),
+      }),
+      this.activityRepo.create({
+        jobseekerId: jobseeker4.id,
+        type: ActivityType.MICRO_JOB_COMPLETED,
+        skill: 'AWS',
+        title: 'Deployed a Node API to AWS ECS',
+        date: d('2026-08-09T02:00:00Z'),
+      }),
+      this.activityRepo.create({
+        jobseekerId: jobseeker4.id,
+        type: ActivityType.SKILL_VERIFIED,
+        skill: 'Docker',
+        title: 'Verified Docker skill via employer review',
+        date: d('2026-08-09T02:05:00Z'),
+      }),
+      this.activityRepo.create({
+        jobseekerId: jobseeker2.id,
+        type: ActivityType.MICRO_JOB_COMPLETED,
+        skill: 'Customer Support',
+        title: 'Cleared 20-ticket support backlog',
+        date: d('2026-07-02T01:00:00Z'),
+      }),
+      this.activityRepo.create({
+        jobseekerId: jobseeker2.id,
+        type: ActivityType.UPGRADED,
+        skill: 'Customer Support',
+        title: 'Upgraded to part-time by Cebu TechWorks',
+        date: d('2026-07-02T01:00:00Z'),
+      }),
+    ]);
+
+    // Offers
+    await this.offersRepo.save([
+      this.offersRepo.create({
+        microJobId: mj4.id,
+        employerId: employer2.id,
+        jobseekerId: jobseeker2.id,
+        offerType: 'Part-time',
+        message: 'You cleared the backlog faster than anyone else this month. Want to join us part-time?',
+        status: OfferStatus.ACCEPTED,
+        createdAt: d('2026-07-02T01:30:00Z'),
+      }),
+      this.offersRepo.create({
+        microJobId: mj6.id,
+        employerId: employer1.id,
+        jobseekerId: jobseeker4.id,
+        offerType: 'Contract',
+        message: "Loved the AWS deploy. We have a 3-month contract lined up if you're interested.",
+        status: OfferStatus.PENDING,
+        createdAt: d('2026-08-09T02:10:00Z'),
+      }),
+    ]);
+
+    // Payments
+    await this.paymentsRepo.save([
+      this.paymentsRepo.create({
+        microJobId: mj1.id,
+        jobseekerId: jobseeker1.id,
+        employerId: employer1.id,
+        amount: 1500,
+        status: PaymentStatus.RELEASED,
+        date: d('2026-08-12T02:00:00Z'),
+      }),
+      this.paymentsRepo.create({
+        microJobId: mj4.id,
+        jobseekerId: jobseeker2.id,
+        employerId: employer2.id,
+        amount: 600,
+        status: PaymentStatus.RELEASED,
+        date: d('2026-07-02T02:00:00Z'),
+      }),
+      this.paymentsRepo.create({
+        microJobId: mj6.id,
+        jobseekerId: jobseeker4.id,
+        employerId: employer1.id,
+        amount: 3000,
+        status: PaymentStatus.RELEASED,
+        date: d('2026-08-09T03:00:00Z'),
+      }),
+      this.paymentsRepo.create({
+        microJobId: mj2.id,
+        jobseekerId: jobseeker2.id,
+        employerId: employer1.id,
+        amount: 800,
+        status: PaymentStatus.IN_ESCROW,
+        date: d('2026-08-22T05:30:00Z'),
+      }),
+    ]);
+
+    this.logger.log(`Seeded admin login: admin@test.com / ${DEMO_PASSWORD}`);
+  }
+}
