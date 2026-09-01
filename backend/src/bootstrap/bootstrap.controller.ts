@@ -5,6 +5,7 @@ import { MicroJobsService } from '../micro-jobs/micro-jobs.service.js';
 import { JobsService } from '../jobs/jobs.service.js';
 import { ActivityService } from '../activity/activity.service.js';
 import { OffersService } from '../offers/offers.service.js';
+import { RecommendationsService } from '../recommendations/recommendations.service.js';
 import { toSafeUser } from '../users/user.entity.js';
 import { serializeMicroJob } from '../micro-jobs/micro-job.entity.js';
 
@@ -17,16 +18,18 @@ export class BootstrapController {
     private readonly jobsService: JobsService,
     private readonly activityService: ActivityService,
     private readonly offersService: OffersService,
+    private readonly recommendationsService: RecommendationsService,
   ) {}
 
   @Get()
   async get() {
-    const [users, microJobs, jobs, activity, offers] = await Promise.all([
+    const [users, microJobs, jobs, activity, offers, recommendations] = await Promise.all([
       this.usersService.findAll(),
       this.microJobsService.findAllWithApplicants(),
       this.jobsService.findAll(),
       this.activityService.findAll(),
       this.offersService.findAll(),
+      this.recommendationsService.findAll(),
     ]);
 
     return {
@@ -35,6 +38,7 @@ export class BootstrapController {
       jobs,
       activity,
       offers,
+      recommendations,
     };
   }
 }

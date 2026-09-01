@@ -3,6 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThanOrEqual, Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { User } from './user.entity.js';
+import type { Availability, EducationEntry, ExperienceEntry, PortfolioLink } from './user.entity.js';
+import { computeBadges } from './badges.js';
+import type { ProfileBadge } from './badges.js';
 import { ProfileView } from './profile-view.entity.js';
 import { Applicant } from '../micro-jobs/applicant.entity.js';
 import { Offer } from '../offers/offer.entity.js';
@@ -46,6 +49,14 @@ export interface PublicProfile {
   preferredJobType: string | null;
   bio: string | null;
   skills: string[];
+  services: string[];
+  certifications: string[];
+  education: EducationEntry[];
+  experience: ExperienceEntry[];
+  portfolioLinks: PortfolioLink[];
+  languages: string[];
+  availability: Availability | null;
+  profileCompleteness: number;
   joinedAt: Date;
   completedTrials: number;
   activity: { id: string; type: string; skill: string | null; title: string; date: Date }[];
@@ -58,6 +69,7 @@ export interface JobseekerAnalytics {
   activityCount: number;
   profileCompleteness: number;
   suggestions: string[];
+  badges: ProfileBadge[];
 }
 
 @Injectable()
@@ -239,6 +251,13 @@ export class UsersService {
       if (dto.category !== undefined) user.category = dto.category;
       if (dto.yearsOfExperience !== undefined) user.yearsOfExperience = dto.yearsOfExperience;
       if (dto.preferredJobType !== undefined) user.preferredJobType = dto.preferredJobType;
+      if (dto.services !== undefined) user.services = dto.services;
+      if (dto.certifications !== undefined) user.certifications = dto.certifications;
+      if (dto.education !== undefined) user.education = dto.education;
+      if (dto.experience !== undefined) user.experience = dto.experience;
+      if (dto.portfolioLinks !== undefined) user.portfolioLinks = dto.portfolioLinks;
+      if (dto.languages !== undefined) user.languages = dto.languages;
+      if (dto.availability !== undefined) user.availability = dto.availability;
     }
     return this.usersRepo.save(user);
   }
@@ -292,6 +311,14 @@ export class UsersService {
       preferredJobType: user.preferredJobType,
       bio: user.bio,
       skills: user.skills ?? [],
+      services: user.services ?? [],
+      certifications: user.certifications ?? [],
+      education: user.education ?? [],
+      experience: user.experience ?? [],
+      portfolioLinks: user.portfolioLinks ?? [],
+      languages: user.languages ?? [],
+      availability: user.availability,
+      profileCompleteness: this.computeProfileCompleteness(user),
       joinedAt: user.createdAt,
       completedTrials,
       activity: activity.map((a) => ({
@@ -313,12 +340,16 @@ export class UsersService {
       user.preferredJobType,
       user.yearsOfExperience !== null && user.yearsOfExperience !== undefined,
       (user.skills?.length ?? 0) >= 3,
+      (user.services?.length ?? 0) > 0,
+      (user.education?.length ?? 0) > 0 || (user.experience?.length ?? 0) > 0,
+      (user.portfolioLinks?.length ?? 0) > 0 || (user.languages?.length ?? 0) > 0,
+      !!user.availability,
     ];
     const filled = fields.filter(Boolean).length;
     return Math.round((filled / fields.length) * 100);
   }
 
-  async getAnalytics(userId: string): Promise<JobseekerAnalytics> {
+  async getAnalytics(userId: string, recommendationsCount = 0): Promise<JobseekerAnalytics> {
     const user = await this.findById(userId);
     const now = Date.now();
     const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
@@ -360,6 +391,12 @@ export class UsersService {
     if (!user.category) {
       suggestions.push('Choose a category so you appear in category search.');
     }
+    if ((user.services?.length ?? 0) === 0) {
+      suggestions.push('List the services you offer so clients know exactly what to hire you for.');
+    }
+    if ((user.education?.length ?? 0) === 0 && (user.experience?.length ?? 0) === 0) {
+      suggestions.push('Add your education or work experience to build a fuller profile.');
+    }
     if (!user.discoverable) {
       suggestions.push("Turn on discoverability in My Activity — you're currently hidden from employer search.");
     }
@@ -369,6 +406,22 @@ export class UsersService {
     if (totalViews === 0) {
       suggestions.push('Share your profile link with potential clients to start getting views.');
     }
+    if ((user.portfolioLinks?.length ?? 0) === 0) {
+      suggestions.push('Add a portfolio link so clients can see samples of your work.');
+    }
+    if (!user.availability) {
+      suggestions.push('Set your availability so clients know if you can start right away.');
+    }
+    if (recommendationsCount === 0 && completedTrials > 0) {
+      suggestions.push('Ask a past employer for a recommendation — it builds trust with new clients.');
+    }
+
+    const badges = computeBadges({
+      completedTrials,
+      recommendationsCount,
+      certificationsCount: user.certifications?.length ?? 0,
+      profileCompleteness,
+    });
 
     return {
       profileViews: { total: totalViews, last7Days, last30Days },
@@ -377,6 +430,7 @@ export class UsersService {
       activityCount,
       profileCompleteness,
       suggestions,
+      badges,
     };
   }
 }

@@ -8,11 +8,27 @@ import { formatDate, timeAgo, initials } from "@/lib/helpers";
 import { Badge, Button, Card } from "@/components/ui/Primitives";
 import type { PublicProfile } from "@/lib/types";
 
+const AVAILABILITY_LABEL: Record<string, { label: string; tone: "emerald" | "amber" | "rose" }> = {
+  available: { label: "🟢 Available now", tone: "emerald" },
+  open: { label: "🟡 Open to offers", tone: "amber" },
+  unavailable: { label: "🔴 Not available", tone: "rose" },
+};
+
+const TABS = [
+  { key: "about", label: "About" },
+  { key: "history", label: "Employment history" },
+  { key: "recommendations", label: "Recommendations" },
+  { key: "badges", label: "Badges" },
+] as const;
+
+type TabKey = (typeof TABS)[number]["key"];
+
 export default function PublicTalentProfile() {
   const { id } = useParams<{ id: string }>();
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<TabKey>("about");
 
   useEffect(() => {
     let cancelled = false;
@@ -34,6 +50,8 @@ export default function PublicTalentProfile() {
       cancelled = true;
     };
   }, [id]);
+
+  const availability = profile?.availability ? AVAILABILITY_LABEL[profile.availability] : null;
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50">
@@ -74,7 +92,10 @@ export default function PublicTalentProfile() {
                   {initials(profile.name)}
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold text-zinc-900">{profile.name}</h1>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="text-xl font-semibold text-zinc-900">{profile.name}</h1>
+                    {availability ? <Badge tone={availability.tone}>{availability.label}</Badge> : null}
+                  </div>
                   {profile.headline ? <p className="mt-0.5 text-sm text-zinc-500">{profile.headline}</p> : null}
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {profile.category ? <Badge tone="sky">{profile.category}</Badge> : null}
@@ -88,53 +109,244 @@ export default function PublicTalentProfile() {
                   </div>
                 </div>
               </div>
-
-              {profile.bio ? <p className="mt-5 text-sm leading-relaxed text-zinc-600">{profile.bio}</p> : null}
-
-              {profile.skills.length > 0 ? (
-                <div className="mt-5 flex flex-wrap gap-1.5">
-                  {profile.skills.map((s) => (
-                    <Badge key={s} tone="indigo">
-                      {s}
-                    </Badge>
-                  ))}
-                </div>
-              ) : null}
-
-              <p className="mt-5 text-xs text-zinc-400">
-                On StratPH since {formatDate(profile.joinedAt)}
-              </p>
+              <p className="mt-5 text-xs text-zinc-400">On StratPH since {formatDate(profile.joinedAt)}</p>
             </Card>
 
-            <div className="mb-6 grid grid-cols-2 gap-4">
+            <div className="mb-6 grid grid-cols-3 gap-4">
               <Card className="text-center">
                 <p className="text-2xl font-semibold text-indigo-600">{profile.completedTrials}</p>
                 <p className="mt-1 text-xs text-zinc-500">Trial Tasks completed</p>
               </Card>
               <Card className="text-center">
                 <p className="text-2xl font-semibold text-indigo-600">{profile.activity.length}</p>
-                <p className="mt-1 text-xs text-zinc-500">Verified activity entries</p>
+                <p className="mt-1 text-xs text-zinc-500">Verified activity</p>
+              </Card>
+              <Card className="text-center">
+                <p className="text-2xl font-semibold text-indigo-600">{profile.profileCompleteness}%</p>
+                <p className="mt-1 text-xs text-zinc-500">Profile complete</p>
               </Card>
             </div>
 
-            <Card>
-              <h2 className="mb-3 text-sm font-semibold text-zinc-900">Verified activity</h2>
-              {profile.activity.length === 0 ? (
-                <p className="text-sm text-zinc-400">No activity recorded yet.</p>
-              ) : (
-                <ul className="space-y-3 border-l border-zinc-200 pl-4">
-                  {profile.activity.map((a) => (
-                    <li key={a.id} className="text-sm">
-                      <p className="text-zinc-800">{a.title}</p>
-                      <div className="mt-0.5 flex items-center gap-2">
-                        {a.skill ? <Badge tone="zinc">{a.skill}</Badge> : null}
-                        <span className="text-xs text-zinc-400">{timeAgo(a.date)}</span>
+            <div className="mb-5 flex gap-2 overflow-x-auto">
+              {TABS.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setTab(t.key)}
+                  className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium ${
+                    tab === t.key ? "bg-indigo-600 text-white" : "bg-white text-zinc-600 hover:bg-zinc-100"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {tab === "about" ? (
+              <div className="space-y-6">
+                {profile.bio ? (
+                  <Card>
+                    <h2 className="mb-2 text-sm font-semibold text-zinc-900">About</h2>
+                    <p className="text-sm leading-relaxed text-zinc-600">{profile.bio}</p>
+                  </Card>
+                ) : null}
+
+                {profile.skills.length > 0 ? (
+                  <Card>
+                    <h2 className="mb-2 text-sm font-semibold text-zinc-900">Skills</h2>
+                    <div className="flex flex-wrap gap-1.5">
+                      {profile.skills.map((s) => (
+                        <Badge key={s} tone="indigo">
+                          {s}
+                        </Badge>
+                      ))}
+                    </div>
+                  </Card>
+                ) : null}
+
+                {profile.services.length > 0 ? (
+                  <Card>
+                    <h2 className="mb-2 text-sm font-semibold text-zinc-900">Services</h2>
+                    <div className="flex flex-wrap gap-1.5">
+                      {profile.services.map((s) => (
+                        <Badge key={s} tone="emerald">
+                          {s}
+                        </Badge>
+                      ))}
+                    </div>
+                  </Card>
+                ) : null}
+
+                {profile.certifications.length > 0 ? (
+                  <Card>
+                    <h2 className="mb-2 text-sm font-semibold text-zinc-900">Certifications</h2>
+                    <div className="flex flex-wrap gap-1.5">
+                      {profile.certifications.map((c) => (
+                        <Badge key={c} tone="amber">
+                          🎓 {c}
+                        </Badge>
+                      ))}
+                    </div>
+                  </Card>
+                ) : null}
+
+                {profile.languages.length > 0 ? (
+                  <Card>
+                    <h2 className="mb-2 text-sm font-semibold text-zinc-900">Languages</h2>
+                    <div className="flex flex-wrap gap-1.5">
+                      {profile.languages.map((l) => (
+                        <Badge key={l} tone="zinc">
+                          {l}
+                        </Badge>
+                      ))}
+                    </div>
+                  </Card>
+                ) : null}
+
+                {profile.portfolioLinks.length > 0 ? (
+                  <Card>
+                    <h2 className="mb-2 text-sm font-semibold text-zinc-900">Portfolio</h2>
+                    <ul className="space-y-1.5">
+                      {profile.portfolioLinks.map((link) => (
+                        <li key={link.id}>
+                          <a
+                            href={link.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sm text-indigo-600 underline"
+                          >
+                            {link.label || link.url}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
+                ) : null}
+
+                {!profile.bio &&
+                profile.skills.length === 0 &&
+                profile.services.length === 0 &&
+                profile.certifications.length === 0 &&
+                profile.languages.length === 0 &&
+                profile.portfolioLinks.length === 0 ? (
+                  <Card>
+                    <p className="text-sm text-zinc-400">This jobseeker hasn&apos;t filled out their About section yet.</p>
+                  </Card>
+                ) : null}
+              </div>
+            ) : null}
+
+            {tab === "history" ? (
+              <div className="space-y-6">
+                {profile.experience.length > 0 ? (
+                  <Card>
+                    <h2 className="mb-3 text-sm font-semibold text-zinc-900">Work experience</h2>
+                    <ul className="space-y-4 border-l border-zinc-200 pl-4">
+                      {profile.experience.map((exp) => (
+                        <li key={exp.id} className="text-sm">
+                          <p className="font-medium text-zinc-800">
+                            {exp.title} · {exp.company}
+                          </p>
+                          <p className="text-xs text-zinc-400">
+                            {exp.startDate || "—"} – {exp.current ? "Present" : exp.endDate || "—"}
+                          </p>
+                          {exp.description ? <p className="mt-1 text-sm text-zinc-600">{exp.description}</p> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
+                ) : null}
+
+                {profile.education.length > 0 ? (
+                  <Card>
+                    <h2 className="mb-3 text-sm font-semibold text-zinc-900">Education</h2>
+                    <ul className="space-y-4 border-l border-zinc-200 pl-4">
+                      {profile.education.map((ed) => (
+                        <li key={ed.id} className="text-sm">
+                          <p className="font-medium text-zinc-800">
+                            {ed.degree}
+                            {ed.fieldOfStudy ? ` in ${ed.fieldOfStudy}` : ""}
+                          </p>
+                          <p className="text-xs text-zinc-400">
+                            {ed.school}
+                            {ed.startYear ? ` · ${ed.startYear}–${ed.endYear || "Present"}` : ""}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
+                ) : null}
+
+                <Card>
+                  <h2 className="mb-3 text-sm font-semibold text-zinc-900">Verified activity</h2>
+                  {profile.activity.length === 0 ? (
+                    <p className="text-sm text-zinc-400">No activity recorded yet.</p>
+                  ) : (
+                    <ul className="space-y-3 border-l border-zinc-200 pl-4">
+                      {profile.activity.map((a) => (
+                        <li key={a.id} className="text-sm">
+                          <p className="text-zinc-800">{a.title}</p>
+                          <div className="mt-0.5 flex items-center gap-2">
+                            {a.skill ? <Badge tone="zinc">{a.skill}</Badge> : null}
+                            <span className="text-xs text-zinc-400">{timeAgo(a.date)}</span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Card>
+
+                {profile.experience.length === 0 && profile.education.length === 0 && profile.activity.length === 0 ? (
+                  <Card>
+                    <p className="text-sm text-zinc-400">No employment history added yet.</p>
+                  </Card>
+                ) : null}
+              </div>
+            ) : null}
+
+            {tab === "recommendations" ? (
+              <Card>
+                <h2 className="mb-3 text-sm font-semibold text-zinc-900">
+                  {profile.recommendations.length > 0
+                    ? `Recommended by ${profile.recommendations.length} employer${profile.recommendations.length === 1 ? "" : "s"}`
+                    : "Recommendations"}
+                </h2>
+                {profile.recommendations.length === 0 ? (
+                  <p className="text-sm text-zinc-400">No recommendations yet.</p>
+                ) : (
+                  <ul className="space-y-4">
+                    {profile.recommendations.map((r) => (
+                      <li key={r.id} className="rounded-lg bg-indigo-50/60 p-3">
+                        <p className="text-sm italic text-zinc-700">&ldquo;{r.message}&rdquo;</p>
+                        <p className="mt-1.5 text-xs font-medium text-indigo-700">
+                          — {r.employerName} · {timeAgo(r.createdAt)}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            ) : null}
+
+            {tab === "badges" ? (
+              <Card>
+                <h2 className="mb-3 text-sm font-semibold text-zinc-900">Badges</h2>
+                {profile.badges.length === 0 ? (
+                  <p className="text-sm text-zinc-400">No badges earned yet.</p>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {profile.badges.map((b) => (
+                      <div key={b.id} className="flex items-start gap-3 rounded-lg border border-zinc-200 p-3">
+                        <span className="text-2xl">{b.icon}</span>
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-900">{b.label}</p>
+                          <p className="text-xs text-zinc-500">{b.description}</p>
+                        </div>
                       </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            ) : null}
 
             <div className="mt-8 rounded-xl border border-indigo-200 bg-indigo-50/60 p-5 text-center">
               <p className="text-sm font-semibold text-zinc-900">

@@ -26,7 +26,7 @@ import type {
 } from "./types";
 import type { ApplicantStatus } from "./types";
 
-const EMPTY_DB: AppDb = { users: [], microJobs: [], jobs: [], activity: [], offers: [] };
+const EMPTY_DB: AppDb = { users: [], microJobs: [], jobs: [], activity: [], offers: [], recommendations: [] };
 
 const AppContext = createContext<AppContextValue | null>(null);
 
@@ -439,6 +439,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
           await apiFetch(`/reports/${reportId}/resolve`, { method: "PATCH" });
         } catch (err) {
           window.alert(errorMessage(err));
+        }
+      },
+
+      async addRecommendation(jobseekerId: string, message: string) {
+        try {
+          await apiFetch("/recommendations", {
+            method: "POST",
+            body: JSON.stringify({ jobseekerId, message }),
+          });
+          await loadAll();
+          return true;
+        } catch (err) {
+          window.alert(errorMessage(err));
+          return false;
         }
       },
 

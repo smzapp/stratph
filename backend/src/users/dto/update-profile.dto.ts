@@ -1,4 +1,5 @@
-import { IsArray, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsArray, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import type { Availability, EducationEntry, ExperienceEntry, PortfolioLink } from '../user.entity.js';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -53,4 +54,35 @@ export class UpdateProfileDto {
   @IsString()
   @MaxLength(60)
   preferredJobType?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  services?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  certifications?: string[];
+
+  @IsOptional()
+  @IsArray()
+  education?: EducationEntry[];
+
+  @IsOptional()
+  @IsArray()
+  experience?: ExperienceEntry[];
+
+  @IsOptional()
+  @IsArray()
+  portfolioLinks?: PortfolioLink[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  languages?: string[];
+
+  @IsOptional()
+  @IsIn(['available', 'open', 'unavailable'])
+  availability?: Availability;
 }

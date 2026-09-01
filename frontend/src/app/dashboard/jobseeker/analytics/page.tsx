@@ -83,6 +83,27 @@ export default function JobseekerAnalyticsPage() {
             </Card>
           </div>
 
+          <Card className="mb-6">
+            <h2 className="mb-3 text-sm font-semibold text-zinc-900">Badges</h2>
+            {analytics.badges.length === 0 ? (
+              <p className="text-sm text-zinc-400">
+                Complete Trial Tasks, add certifications, and fill out your profile to start earning badges.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {analytics.badges.map((b) => (
+                  <span
+                    key={b.id}
+                    title={b.description}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-sm text-indigo-700"
+                  >
+                    <span>{b.icon}</span> {b.label}
+                  </span>
+                ))}
+              </div>
+            )}
+          </Card>
+
           <Card>
             <h2 className="mb-1 text-sm font-semibold text-zinc-900">Ways to get connected with clients faster</h2>
             <p className="mb-4 text-sm text-zinc-500">

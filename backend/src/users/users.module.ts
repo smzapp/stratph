@@ -9,9 +9,14 @@ import { UsersService } from './users.service.js';
 import { UsersController } from './users.controller.js';
 import { PublicController } from './public.controller.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
+import { RecommendationsModule } from '../recommendations/recommendations.module.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, ProfileView, Applicant, Offer, ActivityEntry]), NotificationsModule],
+  imports: [
+    TypeOrmModule.forFeature([User, ProfileView, Applicant, Offer, ActivityEntry]),
+    NotificationsModule,
+    RecommendationsModule,
+  ],
   controllers: [UsersController, PublicController],
   providers: [UsersService],
   exports: [UsersService],

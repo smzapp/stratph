@@ -14,6 +14,7 @@ import { BootstrapModule } from './bootstrap/bootstrap.module.js';
 import { SeedModule } from './seed/seed.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { ReportsModule } from './reports/reports.module.js';
+import { RecommendationsModule } from './recommendations/recommendations.module.js';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ReportsModule } from './reports/reports.module.js';
     SeedModule,
     NotificationsModule,
     ReportsModule,
+    RecommendationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

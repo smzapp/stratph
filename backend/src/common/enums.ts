@@ -60,6 +60,7 @@ export enum NotificationType {
   SUBSCRIPTION_ACTIVATED = 'subscription_activated',
   CONTACT_MESSAGE = 'contact_message',
   EMPLOYER_REPORTED = 'employer_reported',
+  RECOMMENDATION_RECEIVED = 'recommendation_received',
 }
 
 export enum SubscriptionPlan {

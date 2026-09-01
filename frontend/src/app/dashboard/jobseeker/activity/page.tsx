@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/store";
-import { getActivityForJobseeker, getCompletedMicroJobsCount, timeAgo } from "@/lib/helpers";
+import { getActivityForJobseeker, getCompletedMicroJobsCount, getUserById, timeAgo } from "@/lib/helpers";
 import { Badge, Button, Card, Input, PageHeader } from "@/components/ui/Primitives";
 import type { ActivityType } from "@/lib/types";
 
@@ -25,6 +25,9 @@ export default function MyActivity() {
   const activity = getActivityForJobseeker(db, currentUser.id);
   const completed = getCompletedMicroJobsCount(db, currentUser.id);
   const skills = currentUser.skills || [];
+  const recommendations = db.recommendations
+    .filter((r) => r.jobseekerId === currentUser.id)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   const profileUrl =
     typeof window !== "undefined" ? `${window.location.origin}/talent/${currentUser.id}` : "";
 
@@ -164,6 +167,32 @@ export default function MyActivity() {
                 Add
               </Button>
             </form>
+          </Card>
+
+          <Card>
+            <h2 className="mb-3 text-sm font-semibold text-zinc-900">
+              Recommendations{recommendations.length > 0 ? ` (${recommendations.length})` : ""}
+            </h2>
+            {recommendations.length === 0 ? (
+              <p className="text-sm text-zinc-400">
+                No recommendations yet. Employers you&apos;ve worked with can leave one from your
+                public profile.
+              </p>
+            ) : (
+              <ul className="space-y-3">
+                {recommendations.map((r) => {
+                  const employer = getUserById(db, r.employerId);
+                  return (
+                    <li key={r.id} className="rounded-lg bg-indigo-50/60 p-3">
+                      <p className="text-sm italic text-zinc-700">&ldquo;{r.message}&rdquo;</p>
+                      <p className="mt-1.5 text-xs font-medium text-indigo-700">
+                        — {employer?.companyName || employer?.name || "An employer"} · {timeAgo(r.createdAt)}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </Card>
         </div>
       </div>

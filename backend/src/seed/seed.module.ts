@@ -8,11 +8,12 @@ import { ActivityEntry } from '../activity/activity.entity.js';
 import { Offer } from '../offers/offer.entity.js';
 import { ProfileView } from '../users/profile-view.entity.js';
 import { Report } from '../reports/report.entity.js';
+import { Recommendation } from '../recommendations/recommendation.entity.js';
 import { SeedService } from './seed.service.js';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, MicroJob, Applicant, Job, ActivityEntry, Offer, ProfileView, Report]),
+    TypeOrmModule.forFeature([User, MicroJob, Applicant, Job, ActivityEntry, Offer, ProfileView, Report, Recommendation]),
   ],
   providers: [SeedService],
 })

@@ -10,6 +10,7 @@ import { ActivityEntry } from '../activity/activity.entity.js';
 import { Offer } from '../offers/offer.entity.js';
 import { ProfileView } from '../users/profile-view.entity.js';
 import { Report } from '../reports/report.entity.js';
+import { Recommendation } from '../recommendations/recommendation.entity.js';
 import {
   ActivityType,
   ApplicantStatus,
@@ -37,6 +38,7 @@ export class SeedService implements OnApplicationBootstrap {
     @InjectRepository(Offer) private readonly offersRepo: Repository<Offer>,
     @InjectRepository(ProfileView) private readonly profileViewsRepo: Repository<ProfileView>,
     @InjectRepository(Report) private readonly reportsRepo: Repository<Report>,
+    @InjectRepository(Recommendation) private readonly recommendationsRepo: Repository<Recommendation>,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
@@ -123,6 +125,35 @@ export class SeedService implements OnApplicationBootstrap {
         category: 'Web Development',
         yearsOfExperience: 3,
         preferredJobType: 'Full-time',
+        services: ['Landing page development', 'React component fixes', 'Dashboard UI builds'],
+        certifications: ['Meta Front-End Developer (Coursera)'],
+        education: [
+          {
+            id: 'edu-juan-1',
+            school: 'Polytechnic University of the Philippines',
+            degree: 'BS Information Technology',
+            fieldOfStudy: 'Web Development',
+            startYear: 2019,
+            endYear: 2023,
+          },
+        ],
+        experience: [
+          {
+            id: 'exp-juan-1',
+            company: 'Freelance',
+            title: 'Frontend Developer',
+            description: 'Built customer-facing dashboards for 3 local SME clients.',
+            startDate: '2023-06',
+            endDate: null,
+            current: true,
+          },
+        ],
+        portfolioLinks: [
+          { id: 'link-juan-1', label: 'Portfolio site', url: 'https://juandelacruz.example.com' },
+          { id: 'link-juan-2', label: 'GitHub', url: 'https://github.com/example-juan' },
+        ],
+        languages: ['Filipino', 'English'],
+        availability: 'available',
         status: UserStatus.ACTIVE,
         createdAt: d('2026-01-12T08:00:00Z'),
       }),
@@ -479,6 +510,16 @@ export class SeedService implements OnApplicationBootstrap {
         details: "Completed the customer support backlog task but haven't received payment yet.",
         contextLabel: 'Trial Task: Answer 20 customer support emails (backlog clear-out)',
         createdAt: daysAgo(5),
+      }),
+    );
+
+    // Recommendations — shows off the profile enrichment feature out of the box.
+    await this.recommendationsRepo.save(
+      this.recommendationsRepo.create({
+        employerId: employer1.id,
+        jobseekerId: jobseeker1.id,
+        message: 'Juan fixed a tricky date-picker bug for us fast and communicated clearly the whole way. Would hire again.',
+        createdAt: daysAgo(11),
       }),
     );
 

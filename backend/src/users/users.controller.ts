@@ -22,11 +22,15 @@ import { AdminSetSubscriptionDto } from './dto/admin-set-subscription.dto.js';
 import { ContactUserDto } from './dto/contact-user.dto.js';
 import { toSafeUser } from './user.entity.js';
 import type { User } from './user.entity.js';
+import { RecommendationsService } from '../recommendations/recommendations.service.js';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller()
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly recommendationsService: RecommendationsService,
+  ) {}
 
   @Roles(Role.ADMIN)
   @Get('users')
@@ -59,8 +63,9 @@ export class UsersController {
 
   @Roles(Role.JOBSEEKER)
   @Get('me/analytics')
-  getMyAnalytics(@CurrentUser() user: User) {
-    return this.usersService.getAnalytics(user.id);
+  async getMyAnalytics(@CurrentUser() user: User) {
+    const recommendations = await this.recommendationsService.findForUser(user.id);
+    return this.usersService.getAnalytics(user.id, recommendations.length);
   }
 
   @HttpCode(200)

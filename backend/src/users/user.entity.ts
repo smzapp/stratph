@@ -6,6 +6,33 @@ import {
 } from 'typeorm';
 import { Role, UserStatus } from '../common/enums.js';
 
+export interface EducationEntry {
+  id: string;
+  school: string;
+  degree: string;
+  fieldOfStudy?: string;
+  startYear?: number | null;
+  endYear?: number | null; // null/undefined = present
+}
+
+export interface ExperienceEntry {
+  id: string;
+  company: string;
+  title: string;
+  description?: string;
+  startDate?: string | null;
+  endDate?: string | null; // null = present
+  current?: boolean;
+}
+
+export interface PortfolioLink {
+  id: string;
+  label: string;
+  url: string;
+}
+
+export type Availability = 'available' | 'open' | 'unavailable';
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -72,6 +99,27 @@ export class User {
 
   @Column({ type: 'int', default: 0 })
   profileViews!: number;
+
+  @Column({ type: 'simple-json', nullable: true })
+  services!: string[] | null;
+
+  @Column({ type: 'simple-json', nullable: true })
+  certifications!: string[] | null;
+
+  @Column({ type: 'simple-json', nullable: true })
+  education!: EducationEntry[] | null;
+
+  @Column({ type: 'simple-json', nullable: true })
+  experience!: ExperienceEntry[] | null;
+
+  @Column({ type: 'simple-json', nullable: true })
+  portfolioLinks!: PortfolioLink[] | null;
+
+  @Column({ type: 'simple-json', nullable: true })
+  languages!: string[] | null;
+
+  @Column({ type: 'text', nullable: true })
+  availability!: Availability | null;
 }
 
 export type SafeUser = Omit<User, 'passwordHash'>;

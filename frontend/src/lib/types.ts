@@ -54,10 +54,53 @@ export type NotificationType =
   | "subscription_activated"
   | "micro_job_invite"
   | "contact_message"
-  | "employer_reported";
+  | "employer_reported"
+  | "recommendation_received";
 
 export type ReportReason = "scam" | "non_payment" | "inappropriate" | "other";
 export type ReportStatus = "open" | "resolved";
+
+export interface EducationEntry {
+  id: string;
+  school: string;
+  degree: string;
+  fieldOfStudy?: string;
+  startYear?: number | null;
+  endYear?: number | null; // null/undefined = present
+}
+
+export interface ExperienceEntry {
+  id: string;
+  company: string;
+  title: string;
+  description?: string;
+  startDate?: string | null;
+  endDate?: string | null; // null = present
+  current?: boolean;
+}
+
+export interface Recommendation {
+  id: string;
+  employerId: string;
+  jobseekerId: string;
+  message: string;
+  createdAt: string;
+}
+
+export interface PortfolioLink {
+  id: string;
+  label: string;
+  url: string;
+}
+
+export type Availability = "available" | "open" | "unavailable";
+
+export interface ProfileBadge {
+  id: string;
+  label: string;
+  icon: string;
+  description: string;
+}
 
 // A single, loosely-typed User shape (role-specific fields are optional)
 // rather than a discriminated union — the mock DB stores every role in one
@@ -85,6 +128,13 @@ export interface User {
   yearsOfExperience?: number;
   preferredJobType?: string;
   profileViews?: number;
+  services?: string[];
+  certifications?: string[];
+  education?: EducationEntry[];
+  experience?: ExperienceEntry[];
+  portfolioLinks?: PortfolioLink[];
+  languages?: string[];
+  availability?: Availability | null;
 }
 
 export interface Submission {
@@ -168,6 +218,7 @@ export interface AppDb {
   jobs: Job[];
   activity: ActivityEntry[];
   offers: Offer[];
+  recommendations: Recommendation[];
 }
 
 export interface NewMicroJobInput {
@@ -233,6 +284,13 @@ export interface ProfilePatch {
   category?: string;
   yearsOfExperience?: number;
   preferredJobType?: string;
+  services?: string[];
+  certifications?: string[];
+  education?: EducationEntry[];
+  experience?: ExperienceEntry[];
+  portfolioLinks?: PortfolioLink[];
+  languages?: string[];
+  availability?: Availability | null;
 }
 
 export interface PublicProfile {
@@ -245,9 +303,19 @@ export interface PublicProfile {
   preferredJobType: string | null;
   bio: string | null;
   skills: string[];
+  services: string[];
+  certifications: string[];
+  education: EducationEntry[];
+  experience: ExperienceEntry[];
+  portfolioLinks: PortfolioLink[];
+  languages: string[];
+  availability: Availability | null;
+  profileCompleteness: number;
   joinedAt: string;
   completedTrials: number;
   activity: { id: string; type: ActivityType; skill: string | null; title: string; date: string }[];
+  recommendations: { id: string; employerName: string; message: string; createdAt: string }[];
+  badges: ProfileBadge[];
 }
 
 export interface JobseekerAnalytics {
@@ -257,6 +325,7 @@ export interface JobseekerAnalytics {
   activityCount: number;
   profileCompleteness: number;
   suggestions: string[];
+  badges: ProfileBadge[];
 }
 
 export interface Report {
@@ -339,4 +408,5 @@ export interface AppContextValue {
     contextLabel?: string,
   ) => Promise<boolean>;
   adminResolveReport: (reportId: string) => Promise<void>;
+  addRecommendation: (jobseekerId: string, message: string) => Promise<boolean>;
 }
