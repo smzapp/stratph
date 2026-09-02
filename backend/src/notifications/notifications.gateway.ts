@@ -2,13 +2,20 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import {
+  ConnectedSocket,
+  MessageBody,
+  SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
   type OnGatewayConnection,
   type OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
-import type { Notification } from './notification.entity.js';
+
+interface TypingPayload {
+  conversationId: string;
+  recipientId: string;
+}
 
 @Injectable()
 @WebSocketGateway({
@@ -51,7 +58,19 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     // No per-connection state to clean up beyond the socket's own room membership.
   }
 
-  emitToUser(userId: string, notification: Notification): void {
-    this.server.to(`user:${userId}`).emit('notification', notification);
+  emitToUser(userId: string, event: string, payload: unknown): void {
+    this.server.to(`user:${userId}`).emit(event, payload);
+  }
+
+  // Ephemeral, not persisted — a lightweight relay so the other participant in a
+  // chat sees a "typing…" indicator. Trusts the client-supplied recipientId since
+  // the worst case of misuse is a stray typing flicker, not a data leak.
+  @SubscribeMessage('typing')
+  handleTyping(@ConnectedSocket() client: Socket, @MessageBody() data: TypingPayload): void {
+    const senderId = client.data.userId as string | undefined;
+    if (!senderId || !data?.recipientId || !data?.conversationId) return;
+    this.server
+      .to(`user:${data.recipientId}`)
+      .emit('typing', { conversationId: data.conversationId, userId: senderId });
   }
 }

@@ -7,6 +7,9 @@
 *.sqlite
 *.sqlite-journal
 
+# user-uploaded files (chat attachments, etc.)
+/uploads
+
 # Logs
 logs
 *.log

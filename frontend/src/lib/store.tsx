@@ -1,13 +1,15 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { apiFetch, ApiError, getToken, setToken } from "./api";
+import { apiFetch, apiUpload, ApiError, getToken, setToken } from "./api";
 import { connectSocket, disconnectSocket } from "./socket";
 import { ROLES, APPLICANT_STATUSES, MICRO_JOB_STATUSES, OFFER_STATUSES } from "./types";
 import type {
   AppContextValue,
   AppDb,
+  ChatMessage,
+  ConversationSummary,
   LoginResult,
   ModerationStatus,
   NewJobInput,
@@ -47,6 +49,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [typingConversationId, setTypingConversationId] = useState<string | null>(null);
+  const [messageReadSignal, setMessageReadSignal] = useState<{ conversationId: string; at: number } | null>(null);
+  const [messageDeletedSignal, setMessageDeletedSignal] = useState<
+    { conversationId: string; message: ChatMessage; at: number } | null
+  >(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadAll = useCallback(async () => {
     const [bootstrap, settingsResp] = await Promise.all([
@@ -66,12 +75,52 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const connectRealtime = useCallback((token: string) => {
-    const socket = connectSocket(token);
-    socket.off("notification").on("notification", (n: Notification) => {
-      setNotifications((prev) => [n, ...prev]);
-    });
+  const loadConversations = useCallback(async () => {
+    try {
+      const res = await apiFetch<ConversationSummary[]>("/conversations");
+      setConversations(res);
+    } catch {
+      // ignore — conversations are best-effort on load
+    }
   }, []);
+
+  const connectRealtime = useCallback(
+    (token: string) => {
+      const socket = connectSocket(token);
+      socket.off("notification").on("notification", (n: Notification) => {
+        setNotifications((prev) => [n, ...prev]);
+      });
+      // Both events just trigger a fresh fetch of the conversation list — simplest
+      // way to keep unread counts/previews correct without hand-patching state.
+      socket.off("message:new").on("message:new", () => {
+        loadConversations();
+      });
+      socket.off("message:read").on("message:read", (data: { conversationId: string }) => {
+        loadConversations();
+        setMessageReadSignal({ conversationId: data.conversationId, at: Date.now() });
+      });
+      socket
+        .off("message:deleted")
+        .on("message:deleted", (data: { conversationId: string; message: ChatMessage }) => {
+          loadConversations();
+          setMessageDeletedSignal({ conversationId: data.conversationId, message: data.message, at: Date.now() });
+        });
+      // The other participant closing the thread just needs a fresh fetch —
+      // the summary that comes back already has the masked name/closed flag.
+      socket.off("conversation:closed").on("conversation:closed", () => {
+        loadConversations();
+      });
+      // Registered here (not in the consuming component) so it's always attached by
+      // the time the socket connects — a component-local listener can mount and run
+      // its effect before this connect call ever fires, silently missing every event.
+      socket.off("typing").on("typing", (data: { conversationId: string }) => {
+        setTypingConversationId(data.conversationId);
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => setTypingConversationId(null), 3000);
+      });
+    },
+    [loadConversations],
+  );
 
   const refresh = useCallback(async () => {
     if (!getToken()) return;
@@ -90,7 +139,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const me = await apiFetch<User>("/auth/me");
         if (cancelled) return;
         setUserId(me.id);
-        await Promise.all([loadAll(), loadNotifications()]);
+        await Promise.all([loadAll(), loadNotifications(), loadConversations()]);
         connectRealtime(token);
       } catch {
         setToken(null);
@@ -102,7 +151,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [loadAll, loadNotifications, connectRealtime]);
+  }, [loadAll, loadNotifications, loadConversations, connectRealtime]);
 
   const currentUser = useMemo(() => db.users.find((u) => u.id === userId) || null, [db.users, userId]);
 
@@ -110,11 +159,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async (res: AuthResponse): Promise<LoginResult> => {
       setToken(res.accessToken);
       setUserId(res.user.id);
-      await Promise.all([loadAll(), loadNotifications()]);
+      await Promise.all([loadAll(), loadNotifications(), loadConversations()]);
       connectRealtime(res.accessToken);
       return { ok: true, user: res.user };
     },
-    [loadAll, loadNotifications, connectRealtime],
+    [loadAll, loadNotifications, loadConversations, connectRealtime],
   );
 
   const actions = useMemo(
@@ -161,6 +210,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setDb(EMPTY_DB);
         setSettings(null);
         setNotifications([]);
+        setConversations([]);
+        setTypingConversationId(null);
         disconnectSocket();
       },
 
@@ -288,6 +339,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setDb(EMPTY_DB);
           setSettings(null);
           setNotifications([]);
+          setConversations([]);
+          setTypingConversationId(null);
           disconnectSocket();
         }
       },
@@ -408,12 +461,94 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       },
 
-      async contactJobseeker(jobseekerId: string, message: string) {
+      async loadConversations() {
+        await loadConversations();
+      },
+
+      async startConversation(otherUserId: string) {
         try {
-          await apiFetch(`/users/${jobseekerId}/contact`, {
+          const conv = await apiFetch<ConversationSummary>("/conversations", {
             method: "POST",
-            body: JSON.stringify({ message }),
+            body: JSON.stringify({ otherUserId }),
           });
+          await loadConversations();
+          return conv.id;
+        } catch (err) {
+          window.alert(errorMessage(err));
+          return null;
+        }
+      },
+
+      async sendMessage(conversationId: string, body: string) {
+        try {
+          const message = await apiFetch<ChatMessage>(`/conversations/${conversationId}/messages`, {
+            method: "POST",
+            body: JSON.stringify({ body }),
+          });
+          await loadConversations();
+          return message;
+        } catch (err) {
+          window.alert(errorMessage(err));
+          return null;
+        }
+      },
+
+      async sendAttachment(conversationId: string, file: File, caption: string) {
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+          if (caption.trim()) formData.append("body", caption.trim());
+          const message = await apiUpload<ChatMessage>(`/conversations/${conversationId}/attachments`, formData);
+          await loadConversations();
+          return message;
+        } catch (err) {
+          window.alert(errorMessage(err));
+          return null;
+        }
+      },
+
+      async markConversationRead(conversationId: string) {
+        setConversations((prev) =>
+          prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)),
+        );
+        try {
+          await apiFetch(`/conversations/${conversationId}/read`, { method: "PATCH" });
+        } catch {
+          // ignore
+        }
+      },
+
+      async deleteMessage(conversationId: string, messageId: string) {
+        try {
+          return await apiFetch<ChatMessage>(`/conversations/${conversationId}/messages/${messageId}`, {
+            method: "DELETE",
+          });
+        } catch (err) {
+          window.alert(errorMessage(err));
+          return null;
+        }
+      },
+
+      async closeConversation(conversationId: string) {
+        try {
+          const summary = await apiFetch<ConversationSummary>(`/conversations/${conversationId}/close`, {
+            method: "PATCH",
+          });
+          setConversations((prev) => prev.map((c) => (c.id === conversationId ? summary : c)));
+          return true;
+        } catch (err) {
+          window.alert(errorMessage(err));
+          return false;
+        }
+      },
+
+      async setConversationArchived(conversationId: string, archived: boolean) {
+        try {
+          const summary = await apiFetch<ConversationSummary>(
+            `/conversations/${conversationId}/${archived ? "archive" : "unarchive"}`,
+            { method: "PATCH" },
+          );
+          setConversations((prev) => prev.map((c) => (c.id === conversationId ? summary : c)));
           return true;
         } catch (err) {
           window.alert(errorMessage(err));
@@ -474,7 +609,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       },
     }),
-    [db.users, userId, loadAll, refresh, afterAuth],
+    [db.users, userId, loadAll, refresh, afterAuth, loadConversations],
   );
 
   const unreadNotificationCount = useMemo(
@@ -482,9 +617,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [notifications],
   );
 
+  const unreadMessageCount = useMemo(
+    () => conversations.reduce((sum, c) => sum + c.unreadCount, 0),
+    [conversations],
+  );
+
   const value: AppContextValue = useMemo(
-    () => ({ db, settings, currentUser, hydrated, notifications, unreadNotificationCount, ...actions }),
-    [db, settings, currentUser, hydrated, notifications, unreadNotificationCount, actions],
+    () => ({
+      db,
+      settings,
+      currentUser,
+      hydrated,
+      notifications,
+      unreadNotificationCount,
+      conversations,
+      unreadMessageCount,
+      typingConversationId,
+      messageReadSignal,
+      messageDeletedSignal,
+      ...actions,
+    }),
+    [
+      db,
+      settings,
+      currentUser,
+      hydrated,
+      notifications,
+      unreadNotificationCount,
+      conversations,
+      unreadMessageCount,
+      typingConversationId,
+      messageReadSignal,
+      messageDeletedSignal,
+      actions,
+    ],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

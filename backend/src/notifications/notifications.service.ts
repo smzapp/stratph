@@ -22,8 +22,14 @@ export class NotificationsService {
     const notification = await this.notificationsRepo.save(
       this.notificationsRepo.create({ userId, type, title, message, link: link ?? null }),
     );
-    this.gateway.emitToUser(userId, notification);
+    this.gateway.emitToUser(userId, 'notification', notification);
     return notification;
+  }
+
+  // For features (like chat) that need to push a live event without it being a
+  // persisted, bell-icon notification.
+  emitToSocket(userId: string, event: string, payload: unknown): void {
+    this.gateway.emitToUser(userId, event, payload);
   }
 
   async notifyMany(

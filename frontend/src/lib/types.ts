@@ -53,7 +53,6 @@ export type NotificationType =
   | "employer_pending_verification"
   | "subscription_activated"
   | "micro_job_invite"
-  | "contact_message"
   | "employer_reported"
   | "recommendation_received";
 
@@ -100,6 +99,31 @@ export interface ProfileBadge {
   label: string;
   icon: string;
   description: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  body: string | null;
+  attachmentUrl: string | null;
+  attachmentName: string | null;
+  attachmentType: string | null;
+  attachmentSize: number | null;
+  readAt: string | null;
+  deletedAt: string | null;
+  createdAt: string;
+}
+
+export interface ConversationSummary {
+  id: string;
+  otherParty: { id: string; name: string; companyName: string | null; role: Role };
+  lastMessagePreview: string | null;
+  lastMessageAt: string | null;
+  unreadCount: number;
+  closed: boolean;
+  archived: boolean;
+  createdAt: string;
 }
 
 // A single, loosely-typed User shape (role-specific fields are optional)
@@ -400,7 +424,6 @@ export interface AppContextValue {
   markNotificationRead: (id: string) => Promise<void>;
   markAllNotificationsRead: () => Promise<void>;
   inviteToMicroJob: (microJobId: string, jobseekerId: string) => Promise<boolean>;
-  contactJobseeker: (jobseekerId: string, message: string) => Promise<boolean>;
   reportUser: (
     reportedUserId: string,
     reason: ReportReason,
@@ -409,4 +432,17 @@ export interface AppContextValue {
   ) => Promise<boolean>;
   adminResolveReport: (reportId: string) => Promise<void>;
   addRecommendation: (jobseekerId: string, message: string) => Promise<boolean>;
+  conversations: ConversationSummary[];
+  unreadMessageCount: number;
+  typingConversationId: string | null;
+  messageReadSignal: { conversationId: string; at: number } | null;
+  messageDeletedSignal: { conversationId: string; message: ChatMessage; at: number } | null;
+  loadConversations: () => Promise<void>;
+  startConversation: (otherUserId: string) => Promise<string | null>;
+  sendMessage: (conversationId: string, body: string) => Promise<ChatMessage | null>;
+  sendAttachment: (conversationId: string, file: File, caption: string) => Promise<ChatMessage | null>;
+  markConversationRead: (conversationId: string) => Promise<void>;
+  deleteMessage: (conversationId: string, messageId: string) => Promise<ChatMessage | null>;
+  closeConversation: (conversationId: string) => Promise<boolean>;
+  setConversationArchived: (conversationId: string, archived: boolean) => Promise<boolean>;
 }

@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import type { ButtonHTMLAttributes, ElementType, HTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { initials } from "@/lib/helpers";
 import type { Tone } from "@/lib/types";
@@ -130,20 +131,24 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   hint?: string;
 }
 
-export function Textarea({ label, hint, className = "", ...props }: TextareaProps) {
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
+  { label, hint, className = "", ...props },
+  ref,
+) {
   return (
     <label className="block">
       {label ? (
         <span className="mb-1.5 block text-sm font-medium text-zinc-700">{label}</span>
       ) : null}
       <textarea
+        ref={ref}
         className={`w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 ${className}`}
         {...props}
       />
       {hint ? <span className="mt-1 block text-xs text-zinc-400">{hint}</span> : null}
     </label>
   );
-}
+});
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;

@@ -1,9 +1,14 @@
+import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module.js';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  mkdirSync(join(process.cwd(), 'uploads', 'messages'), { recursive: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads/' });
   app.setGlobalPrefix('api');
   app.enableCors({
     origin: process.env.FRONTEND_ORIGIN?.split(',') ?? ['http://localhost:3000'],

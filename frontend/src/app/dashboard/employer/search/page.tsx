@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/store";
 import {
   getActivityForJobseeker,
@@ -30,7 +31,7 @@ const MIN_EXPERIENCE_OPTIONS = [
   { label: "5+ years", value: "5" },
 ];
 
-type ComposerMode = "invite" | "contact" | "recommend" | null;
+type ComposerMode = "invite" | "recommend" | null;
 
 function TrialTaskCombobox({
   options,
@@ -107,7 +108,8 @@ function TrialTaskCombobox({
 }
 
 export default function ReverseHiringSearch() {
-  const { db, currentUser, recordProfileView, inviteToMicroJob, contactJobseeker, addRecommendation } = useApp();
+  const router = useRouter();
+  const { db, currentUser, recordProfileView, inviteToMicroJob, startConversation, addRecommendation } = useApp();
   const [query, setQuery] = useState("");
   const [recency, setRecency] = useState("any");
   const [activeSkill, setActiveSkill] = useState("All");
@@ -119,13 +121,11 @@ export default function ReverseHiringSearch() {
 
   const [composer, setComposer] = useState<ComposerMode>(null);
   const [inviteJobId, setInviteJobId] = useState("");
-  const [contactMessage, setContactMessage] = useState("");
   const [recommendMessage, setRecommendMessage] = useState("");
   const [invitedIds, setInvitedIds] = useState<string[]>([]);
-  const [contactedIds, setContactedIds] = useState<string[]>([]);
   const [recommendedIds, setRecommendedIds] = useState<string[]>([]);
   const [inviting, setInviting] = useState(false);
-  const [contacting, setContacting] = useState(false);
+  const [messaging, setMessaging] = useState(false);
   const [recommending, setRecommending] = useState(false);
 
   const isSubscribed = isSubscriptionActive(currentUser);
@@ -190,7 +190,6 @@ export default function ReverseHiringSearch() {
   function resetComposer() {
     setComposer(null);
     setInviteJobId("");
-    setContactMessage("");
     setRecommendMessage("");
   }
 
@@ -205,14 +204,12 @@ export default function ReverseHiringSearch() {
     }
   }
 
-  async function handleContact(jobseekerId: string) {
-    if (!contactMessage.trim()) return;
-    setContacting(true);
-    const ok = await contactJobseeker(jobseekerId, contactMessage.trim());
-    setContacting(false);
-    if (ok) {
-      setContactedIds((prev) => [...prev, jobseekerId]);
-      resetComposer();
+  async function handleMessage(jobseekerId: string) {
+    setMessaging(true);
+    const conversationId = await startConversation(jobseekerId);
+    setMessaging(false);
+    if (conversationId) {
+      router.push(`/dashboard/employer/messages?with=${conversationId}`);
     }
   }
 
@@ -355,7 +352,7 @@ export default function ReverseHiringSearch() {
                 <div className="space-y-2">
                   {!isSubscribed ? (
                     <p className="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-800">
-                      Inviting and contacting candidates requires an active subscription.{" "}
+                      Inviting and messaging candidates requires an active subscription.{" "}
                       <Link href="/pricing" className="font-medium underline">
                         View plans →
                       </Link>
@@ -377,11 +374,11 @@ export default function ReverseHiringSearch() {
                       size="sm"
                       variant="outline"
                       className="flex-1 sm:flex-none"
-                      disabled={!isSubscribed || contactedIds.includes(selected.candidate.id)}
+                      disabled={!isSubscribed || messaging}
                       title={!isSubscribed ? "Requires an active subscription" : undefined}
-                      onClick={() => setComposer("contact")}
+                      onClick={() => handleMessage(selected.candidate.id)}
                     >
-                      {contactedIds.includes(selected.candidate.id) ? "Message sent ✓" : "Contact"}
+                      {messaging ? "Opening…" : "Message"}
                     </Button>
                     <Button
                       size="sm"
@@ -406,28 +403,6 @@ export default function ReverseHiringSearch() {
                     </Button>
                     <Button size="sm" disabled={!inviteJobId || inviting} onClick={() => handleInvite(selected.candidate.id)}>
                       {inviting ? "Inviting…" : "Send invite"}
-                    </Button>
-                  </div>
-                </div>
-              ) : composer === "contact" ? (
-                <div className="space-y-2">
-                  <Textarea
-                    rows={3}
-                    autoFocus
-                    placeholder="Write a message to this candidate…"
-                    value={contactMessage}
-                    onChange={(e) => setContactMessage(e.target.value)}
-                  />
-                  <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                    <Button size="sm" variant="outline" onClick={resetComposer}>
-                      Cancel
-                    </Button>
-                    <Button
-                      size="sm"
-                      disabled={!contactMessage.trim() || contacting}
-                      onClick={() => handleContact(selected.candidate.id)}
-                    >
-                      {contacting ? "Sending…" : "Send message"}
                     </Button>
                   </div>
                 </div>

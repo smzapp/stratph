@@ -15,6 +15,7 @@ import { SeedModule } from './seed/seed.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { ReportsModule } from './reports/reports.module.js';
 import { RecommendationsModule } from './recommendations/recommendations.module.js';
+import { ConversationsModule } from './conversations/conversations.module.js';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { RecommendationsModule } from './recommendations/recommendations.module.
     NotificationsModule,
     ReportsModule,
     RecommendationsModule,
+    ConversationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

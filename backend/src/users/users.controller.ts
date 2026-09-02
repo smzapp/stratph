@@ -19,7 +19,6 @@ import { UpdateProfileDto } from './dto/update-profile.dto.js';
 import { UpdateStatusDto } from './dto/update-status.dto.js';
 import { SubscribeDto } from './dto/subscribe.dto.js';
 import { AdminSetSubscriptionDto } from './dto/admin-set-subscription.dto.js';
-import { ContactUserDto } from './dto/contact-user.dto.js';
 import { toSafeUser } from './user.entity.js';
 import type { User } from './user.entity.js';
 import { RecommendationsService } from '../recommendations/recommendations.service.js';
@@ -109,13 +108,5 @@ export class UsersController {
   async adminSetSubscription(@Param('id') id: string, @Body() dto: AdminSetSubscriptionDto) {
     const updated = await this.usersService.adminSetSubscription(id, dto.plan ?? null);
     return toSafeUser(updated);
-  }
-
-  @Roles(Role.EMPLOYER)
-  @HttpCode(200)
-  @Post('users/:id/contact')
-  async contact(@CurrentUser() user: User, @Param('id') id: string, @Body() dto: ContactUserDto) {
-    await this.usersService.contactJobseeker(user, id, dto.message);
-    return { ok: true };
   }
 }

@@ -11,11 +11,12 @@ const NAV: NavItem[] = [
   { href: "/dashboard/employer/micro-jobs", label: "Trial Tasks", icon: "⚡" },
   { href: "/dashboard/employer/search", label: "Reverse Hiring", icon: "🧭" },
   { href: "/dashboard/employer/jobs", label: "Job Postings", icon: "📋" },
+  { href: "/dashboard/employer/messages", label: "Messages", icon: "💬" },
   { href: "/pricing", label: "Pricing", icon: "💳" },
 ];
 
 function EmployerNav({ children }: { children: ReactNode }) {
-  const { db, currentUser } = useApp();
+  const { db, currentUser, unreadMessageCount } = useApp();
   if (!currentUser) return null;
 
   const pendingSubmissions = db.microJobs
@@ -25,11 +26,15 @@ function EmployerNav({ children }: { children: ReactNode }) {
       0,
     );
 
-  const navItems = NAV.map((item) =>
-    item.href === "/dashboard/employer/micro-jobs" && pendingSubmissions > 0
-      ? { ...item, badge: pendingSubmissions }
-      : item,
-  );
+  const navItems = NAV.map((item) => {
+    if (item.href === "/dashboard/employer/micro-jobs" && pendingSubmissions > 0) {
+      return { ...item, badge: pendingSubmissions };
+    }
+    if (item.href === "/dashboard/employer/messages" && unreadMessageCount > 0) {
+      return { ...item, badge: unreadMessageCount };
+    }
+    return item;
+  });
 
   return <DashboardShell navItems={navItems}>{children}</DashboardShell>;
 }

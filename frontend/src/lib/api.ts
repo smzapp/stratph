@@ -1,5 +1,14 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+const API_ORIGIN = API_URL.replace(/\/api\/?$/, "");
 const TOKEN_KEY = "stratph_token";
+
+// Attachment URLs come back from the API as origin-relative paths
+// (e.g. "/uploads/messages/x.pdf") since they're served by the backend, a
+// different origin than the frontend — resolve them to absolute URLs.
+export function resolveFileUrl(url: string): string {
+  if (/^https?:\/\//.test(url)) return url;
+  return `${API_ORIGIN}${url}`;
+}
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -28,19 +37,7 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiFetch<T = unknown>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
-  const token = getToken();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(options.headers as Record<string, string> | undefined),
-  };
-  if (token) headers.Authorization = `Bearer ${token}`;
-
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
-
+async function parseResponse<T>(res: Response): Promise<T> {
   let body: unknown = null;
   const text = await res.text();
   if (text) {
@@ -62,4 +59,30 @@ export async function apiFetch<T = unknown>(
   }
 
   return body as T;
+}
+
+export async function apiFetch<T = unknown>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string> | undefined),
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+  return parseResponse<T>(res);
+}
+
+// For multipart uploads — deliberately doesn't set Content-Type so the browser
+// can fill in the multipart boundary itself.
+export async function apiUpload<T = unknown>(path: string, formData: FormData): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${API_URL}${path}`, { method: "POST", headers, body: formData });
+  return parseResponse<T>(res);
 }

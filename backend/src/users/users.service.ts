@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThanOrEqual, Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
@@ -207,23 +207,6 @@ export class UsersService {
     user.subscriptionPlan = null;
     user.subscriptionExpiresAt = null;
     return this.usersRepo.save(user);
-  }
-
-  async contactJobseeker(employer: User, jobseekerId: string, message: string): Promise<void> {
-    if (!this.hasActiveSubscription(employer)) {
-      throw new ForbiddenException('Contacting candidates requires an active subscription.');
-    }
-    const jobseeker = await this.findById(jobseekerId);
-    if (jobseeker.role !== Role.JOBSEEKER) {
-      throw new BadRequestException('You can only contact jobseeker accounts.');
-    }
-    await this.notificationsService.notify(
-      jobseekerId,
-      NotificationType.CONTACT_MESSAGE,
-      `Message from ${employer.companyName || employer.name}`,
-      message,
-      '/profile',
-    );
   }
 
   async adminSetSubscription(userId: string, plan: SubscriptionPlan | null): Promise<User> {

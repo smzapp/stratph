@@ -58,7 +58,6 @@ export enum NotificationType {
   EMPLOYER_VERIFIED = 'employer_verified',
   EMPLOYER_PENDING_VERIFICATION = 'employer_pending_verification',
   SUBSCRIPTION_ACTIVATED = 'subscription_activated',
-  CONTACT_MESSAGE = 'contact_message',
   EMPLOYER_REPORTED = 'employer_reported',
   RECOMMENDATION_RECEIVED = 'recommendation_received',
 }
