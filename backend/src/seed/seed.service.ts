@@ -25,6 +25,42 @@ import {
 
 const DEMO_PASSWORD = 'test1234';
 
+const BULK_MICRO_JOB_TEMPLATES: { category: string; title: string; skills: string[] }[] = [
+  { category: 'Web Development', title: 'Fix a responsive layout bug on the pricing page', skills: ['React', 'CSS'] },
+  { category: 'Web Development', title: 'Add a dark mode toggle to the dashboard', skills: ['React', 'TypeScript'] },
+  { category: 'Web Development', title: 'Build a reusable form component library', skills: ['React', 'TypeScript'] },
+  { category: 'Web Development', title: 'Optimize bundle size for a Next.js app', skills: ['Next.js', 'Webpack'] },
+  { category: 'Web Development', title: 'Set up a CI/CD pipeline with GitHub Actions', skills: ['GitHub Actions', 'Docker'] },
+  { category: 'Web Development', title: 'Migrate a class-based React app to hooks', skills: ['React'] },
+  { category: 'Web Development', title: 'Add unit tests for the checkout flow', skills: ['Jest', 'React'] },
+  { category: 'Web Development', title: 'Integrate Stripe payments into a Next.js site', skills: ['Next.js', 'Stripe'] },
+  { category: 'Web Development', title: 'Build a REST API for a mobile app', skills: ['Node.js', 'Express'] },
+  { category: 'Web Development', title: 'Set up a PostgreSQL database with migrations', skills: ['PostgreSQL', 'Node.js'] },
+  { category: 'Data Entry', title: 'Digitize 200 handwritten inventory records', skills: ['Data Entry', 'Excel'] },
+  { category: 'Data Entry', title: 'Clean up a messy customer contact spreadsheet', skills: ['Excel', 'Data Entry'] },
+  { category: 'Data Entry', title: 'Build a pivot table report from raw sales data', skills: ['Excel'] },
+  { category: 'Data Entry', title: 'Enter 300 product listings into an e-commerce CMS', skills: ['Data Entry'] },
+  { category: 'Data Entry', title: 'Convert scanned receipts into a spreadsheet', skills: ['Data Entry', 'Excel'] },
+  { category: 'Video Editing', title: 'Edit a 3-minute YouTube tutorial video', skills: ['Premiere Pro'] },
+  { category: 'Video Editing', title: 'Add subtitles and captions to 5 short clips', skills: ['Video Editing'] },
+  { category: 'Video Editing', title: 'Cut a highlight reel from a 1-hour webinar', skills: ['Premiere Pro'] },
+  { category: 'Video Editing', title: 'Color grade a short brand film', skills: ['After Effects'] },
+  { category: 'Customer Support', title: 'Handle live chat support for 4 hours', skills: ['Customer Support'] },
+  { category: 'Customer Support', title: 'Clear a 30-ticket support backlog', skills: ['Zendesk'] },
+  { category: 'Customer Support', title: 'Write canned responses for common FAQs', skills: ['Customer Support'] },
+  { category: 'Customer Support', title: 'Triage and tag 100 incoming support emails', skills: ['Email Handling'] },
+  { category: 'Writing', title: "Write a 'Getting Started' guide for a SaaS product", skills: ['Writing'] },
+  { category: 'Writing', title: 'Draft 5 social media captions for a product launch', skills: ['Writing'] },
+  { category: 'Writing', title: 'Proofread and edit a 2,000-word case study', skills: ['Writing'] },
+  { category: 'Writing', title: 'Write 3 product descriptions for a Shopify store', skills: ['Writing', 'SEO'] },
+  { category: 'Design', title: 'Design a landing page mockup in Figma', skills: ['Figma'] },
+  { category: 'Design', title: 'Create a set of 10 app icons', skills: ['Illustrator'] },
+  { category: 'Design', title: 'Redesign an email newsletter template', skills: ['Figma'] },
+  { category: 'Design', title: 'Design a one-page pitch deck slide', skills: ['Figma'] },
+  { category: 'Other', title: 'Research 20 competitor pricing pages', skills: ['Research'] },
+  { category: 'Other', title: 'Compile a list of 50 local business leads', skills: ['Research'] },
+];
+
 @Injectable()
 export class SeedService implements OnApplicationBootstrap {
   private readonly logger = new Logger(SeedService.name);
@@ -97,7 +133,7 @@ export class SeedService implements OnApplicationBootstrap {
       }),
     );
 
-    await this.usersRepo.save(
+    const employer3 = await this.usersRepo.save(
       this.usersRepo.create({
         email: 'team@mangohealth.io',
         passwordHash,
@@ -326,7 +362,7 @@ export class SeedService implements OnApplicationBootstrap {
 
     await this.microJobsRepo.save(
       this.microJobsRepo.create({
-        employerId: (await this.usersRepo.findOneOrFail({ where: { email: 'team@mangohealth.io' } })).id,
+        employerId: employer3.id,
         title: "Write one blog post: 'Telehealth in Rural PH'",
         category: 'Writing',
         description: '800-1000 word blog post, SEO-friendly, casual but credible tone.',
@@ -372,6 +408,31 @@ export class SeedService implements OnApplicationBootstrap {
       }),
     );
 
+    // Bulk-seeded, open Trial Tasks — enough volume for the Browse tab's
+    // pagination to actually kick in (brings the total to ~100).
+    const bulkEmployerIds = [employer1.id, employer2.id, employer3.id];
+    const bulkEstimatedTimes = ['2 hours', '3 hours', '4 hours', '1 day', '2 days'];
+    const bulkNow = Date.now();
+    for (let i = 0; i < 94; i++) {
+      const template = BULK_MICRO_JOB_TEMPLATES[i % BULK_MICRO_JOB_TEMPLATES.length];
+      const cycle = Math.floor(i / BULK_MICRO_JOB_TEMPLATES.length);
+      await this.microJobsRepo.save(
+        this.microJobsRepo.create({
+          employerId: bulkEmployerIds[i % bulkEmployerIds.length],
+          title: cycle > 0 ? `${template.title} (Batch ${cycle + 1})` : template.title,
+          category: template.category,
+          description: `${template.title}. Clear scope and a fast turnaround — full details shared after you apply.`,
+          deliverable: 'A short writeup or link showing the completed work.',
+          pay: 300 + ((i * 37) % 2700),
+          estimatedTime: bulkEstimatedTimes[i % bulkEstimatedTimes.length],
+          skillsRequired: template.skills,
+          status: MicroJobStatus.OPEN,
+          moderation: ModerationStatus.APPROVED,
+          createdAt: new Date(bulkNow - i * 6 * 60 * 60 * 1000),
+        }),
+      );
+    }
+
     // Regular job postings
     await this.jobsRepo.save(
       this.jobsRepo.create({
@@ -403,7 +464,7 @@ export class SeedService implements OnApplicationBootstrap {
     );
     await this.jobsRepo.save(
       this.jobsRepo.create({
-        employerId: (await this.usersRepo.findOneOrFail({ where: { email: 'team@mangohealth.io' } })).id,
+        employerId: employer3.id,
         title: 'Backend Engineer (Node.js/AWS)',
         type: 'Full-time',
         location: 'Remote (PH)',

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/store";
 import { getApplicationsForJobseeker, getUserById, formatPeso, timeAgo } from "@/lib/helpers";
@@ -23,6 +23,8 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]["key"];
 
+const PAGE_SIZE = 20;
+
 export default function BrowseMicroJobs() {
   const { db, currentUser } = useApp();
   const [tab, setTab] = useState<TabKey>("browse");
@@ -31,6 +33,7 @@ export default function BrowseMicroJobs() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [skill, setSkill] = useState("All");
   const [minPay, setMinPay] = useState("0");
+  const [page, setPage] = useState(1);
 
   const categories = useMemo(
     () => ["All", ...new Set(db.microJobs.map((mj) => mj.category))],
@@ -56,6 +59,25 @@ export default function BrowseMicroJobs() {
       )
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [db.microJobs, category, skill, minPay, query]);
+
+  const pageCount = Math.max(1, Math.ceil(microJobs.length / PAGE_SIZE));
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(1);
+  }, [category, skill, minPay, query]);
+
+  useEffect(() => {
+    if (page > pageCount) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPage(pageCount);
+    }
+  }, [page, pageCount]);
+
+  const pagedMicroJobs = useMemo(
+    () => microJobs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [microJobs, page],
+  );
 
   const myApplications = useMemo(
     () => (currentUser ? getApplicationsForJobseeker(db, currentUser.id) : []),
@@ -165,8 +187,13 @@ export default function BrowseMicroJobs() {
           {microJobs.length === 0 ? (
             <EmptyState title="No Trial Tasks match your search" description="Try a different keyword or category." />
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {microJobs.map((mj) => {
+            <>
+              <p className="mb-3 text-xs text-zinc-400">
+                Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, microJobs.length)} of{" "}
+                {microJobs.length} Trial Task{microJobs.length === 1 ? "" : "s"}
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+              {pagedMicroJobs.map((mj) => {
                 const employer = getUserById(db, mj.employerId);
                 const myApplication = mj.applicants.find((a) => a.jobseekerId === currentUser.id);
                 const eligible = meetsRequirements(mj);
@@ -205,7 +232,41 @@ export default function BrowseMicroJobs() {
                   </Link>
                 );
               })}
-            </div>
+              </div>
+              {pageCount > 1 ? (
+                <div className="mt-6 flex items-center justify-center gap-1">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Prev
+                  </button>
+                  {Array.from({ length: pageCount }, (_, i) => i + 1)
+                    .filter((p) => p === 1 || p === pageCount || Math.abs(p - page) <= 1)
+                    .map((p, i, arr) => (
+                      <span key={p} className="flex items-center gap-1">
+                        {i > 0 && arr[i - 1] !== p - 1 ? <span className="px-1 text-zinc-300">…</span> : null}
+                        <button
+                          onClick={() => setPage(p)}
+                          className={`h-8 min-w-8 rounded-lg px-2 text-sm font-medium ${
+                            p === page ? "bg-indigo-600 text-white" : "text-zinc-600 hover:bg-zinc-100"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      </span>
+                    ))}
+                  <button
+                    onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                    disabled={page === pageCount}
+                    className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Next
+                  </button>
+                </div>
+              ) : null}
+            </>
           )}
         </>
       ) : null}
@@ -254,7 +315,7 @@ function ApplicationList({
   );
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-2">
       {sorted.map(({ microJob, applicant }) => {
         const employer = getUserById(db, microJob.employerId);
         return (

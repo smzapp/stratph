@@ -175,6 +175,7 @@ export function MessagesView() {
   useEffect(() => {
     if (!selectedId || !messageDeletedSignal || messageDeletedSignal.conversationId !== selectedId) return;
     const deleted = messageDeletedSignal.message;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMessages((prev) => prev.map((m) => (m.id === deleted.id ? deleted : m)));
   }, [messageDeletedSignal, selectedId]);
 
