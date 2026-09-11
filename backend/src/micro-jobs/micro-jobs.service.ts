@@ -17,6 +17,9 @@ import {
 import { SettingsService } from '../settings/settings.service.js';
 import { UsersService } from '../users/users.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { FollowsService } from '../follows/follows.service.js';
+import { JobAlertsService } from '../job-alerts/job-alerts.service.js';
+import type { User } from '../users/user.entity.js';
 import type { CreateMicroJobDto } from './dto/create-micro-job.dto.js';
 import type { SubmitDeliverableDto } from './dto/submit-deliverable.dto.js';
 import type { ReviewSubmissionDto } from './dto/review-submission.dto.js';
@@ -35,7 +38,29 @@ export class MicroJobsService {
     private readonly settingsService: SettingsService,
     private readonly usersService: UsersService,
     private readonly notificationsService: NotificationsService,
+    private readonly followsService: FollowsService,
+    private readonly jobAlertsService: JobAlertsService,
   ) {}
+
+  // Fired the moment a Trial Task actually goes live for jobseekers to see —
+  // either auto-approved at creation, or approved later by an admin.
+  private async announceNewMicroJob(microJob: MicroJob, employer: User): Promise<void> {
+    const link = `/dashboard/jobseeker/micro-jobs/${microJob.id}`;
+    await Promise.all([
+      this.followsService.notifyFollowersOfNewOpportunity(employer.id, {
+        title: `New Trial Task: "${microJob.title}"`,
+        link,
+      }),
+      this.jobAlertsService.notifyMatchingJobseekers({
+        title: microJob.title,
+        companyName: employer.companyName || employer.name,
+        category: microJob.category,
+        skillsRequired: microJob.skillsRequired,
+        pay: microJob.pay,
+        link,
+      }),
+    ]);
+  }
 
   async findAllWithApplicants(): Promise<MicroJobWithApplicants[]> {
     const [microJobs, applicants] = await Promise.all([
@@ -87,6 +112,8 @@ export class MicroJobsService {
         `"${saved.title}" from ${employer.companyName || employer.name} is waiting for approval.`,
         '/dashboard/admin/micro-jobs',
       );
+    } else {
+      await this.announceNewMicroJob(saved, employer);
     }
 
     return { ...saved, applicants: [] };
@@ -297,6 +324,11 @@ export class MicroJobsService {
         : `"${microJob.title}" was not approved by our moderation team.`,
       '/dashboard/employer/micro-jobs',
     );
+
+    if (moderation === ModerationStatus.APPROVED) {
+      const employer = await this.usersService.findById(microJob.employerId);
+      await this.announceNewMicroJob(microJob, employer);
+    }
 
     return this.findOneOrFail(microJobId);
   }

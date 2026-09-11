@@ -4,7 +4,10 @@ import { Repository } from 'typeorm';
 import { Job } from './job.entity.js';
 import { UsersService } from '../users/users.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { FollowsService } from '../follows/follows.service.js';
+import { JobAlertsService } from '../job-alerts/job-alerts.service.js';
 import { ModerationStatus, NotificationType, Role } from '../common/enums.js';
+import type { User } from '../users/user.entity.js';
 import type { CreateJobDto } from './dto/create-job.dto.js';
 
 @Injectable()
@@ -13,10 +16,31 @@ export class JobsService {
     @InjectRepository(Job) private readonly jobsRepo: Repository<Job>,
     private readonly usersService: UsersService,
     private readonly notificationsService: NotificationsService,
+    private readonly followsService: FollowsService,
+    private readonly jobAlertsService: JobAlertsService,
   ) {}
 
   findAll(): Promise<Job[]> {
     return this.jobsRepo.find({ order: { postedAt: 'DESC' } });
+  }
+
+  // Fired the moment a job posting actually goes live for jobseekers to see —
+  // either auto-approved at creation, or approved later by an admin.
+  private async announceNewJob(job: Job, employer: User): Promise<void> {
+    const link = '/dashboard/jobseeker/jobs';
+    await Promise.all([
+      this.followsService.notifyFollowersOfNewOpportunity(employer.id, {
+        title: `New job posting: "${job.title}"`,
+        link,
+      }),
+      this.jobAlertsService.notifyMatchingJobseekers({
+        title: job.title,
+        companyName: employer.companyName || employer.name,
+        category: job.type,
+        skillsRequired: job.skillsRequired,
+        link,
+      }),
+    ]);
   }
 
   async create(employerId: string, dto: CreateJobDto): Promise<Job> {
@@ -40,6 +64,7 @@ export class JobsService {
         `"${saved.title}" was auto-approved thanks to your ${employer.subscriptionPlan} plan.`,
         '/dashboard/employer/jobs',
       );
+      await this.announceNewJob(saved, employer);
     } else {
       const admins = await this.usersService.findByRole(Role.ADMIN);
       await this.notificationsService.notifyMany(
@@ -69,6 +94,11 @@ export class JobsService {
         : `"${saved.title}" was not approved by our moderation team.`,
       '/dashboard/employer/jobs',
     );
+
+    if (moderation === ModerationStatus.APPROVED) {
+      const employer = await this.usersService.findById(saved.employerId);
+      await this.announceNewJob(saved, employer);
+    }
 
     return saved;
   }

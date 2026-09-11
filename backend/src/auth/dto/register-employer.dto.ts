@@ -19,4 +19,8 @@ export class RegisterEmployerDto {
   @IsOptional()
   @IsString()
   companyBlurb?: string;
+
+  @IsOptional()
+  @IsString()
+  inviteToken?: string;
 }

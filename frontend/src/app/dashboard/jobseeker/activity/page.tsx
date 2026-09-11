@@ -16,7 +16,8 @@ const ACTIVITY_ICON: Record<ActivityType, string> = {
 };
 
 export default function MyActivity() {
-  const { db, currentUser, toggleDiscoverable, updateJobseekerSkills } = useApp();
+  const { db, currentUser, toggleDiscoverable, updateJobseekerSkills, updateMyProfile, followedEmployers, unfollowEmployer } =
+    useApp();
   const [newSkill, setNewSkill] = useState("");
   const [copied, setCopied] = useState(false);
 
@@ -85,6 +86,32 @@ export default function MyActivity() {
             <span
               className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${
                 currentUser.discoverable ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
+      </Card>
+
+      <Card className="mb-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-zinc-900">📧 Job alert emails</p>
+            <p className="mt-1 text-sm text-zinc-500">
+              {currentUser.jobAlertsEnabled !== false
+                ? "We'll email you when a new Trial Task or job matches your skills."
+                : "You won't get emailed about new matching opportunities."}
+            </p>
+          </div>
+          <button
+            onClick={() => updateMyProfile({ jobAlertsEnabled: currentUser.jobAlertsEnabled === false })}
+            className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
+              currentUser.jobAlertsEnabled !== false ? "bg-indigo-600" : "bg-zinc-300"
+            }`}
+            aria-pressed={currentUser.jobAlertsEnabled !== false}
+          >
+            <span
+              className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-transform ${
+                currentUser.jobAlertsEnabled !== false ? "translate-x-6" : "translate-x-1"
               }`}
             />
           </button>
@@ -167,6 +194,34 @@ export default function MyActivity() {
                 Add
               </Button>
             </form>
+          </Card>
+
+          <Card>
+            <h2 className="mb-3 text-sm font-semibold text-zinc-900">
+              Following{followedEmployers.length > 0 ? ` (${followedEmployers.length})` : ""}
+            </h2>
+            {followedEmployers.length === 0 ? (
+              <p className="text-sm text-zinc-400">
+                Follow an employer from a job or Trial Task listing to hear about what they post next.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {followedEmployers.map((e) => (
+                  <li key={e.id} className="flex items-center justify-between gap-2">
+                    <span className="truncate text-sm text-zinc-700">
+                      {e.companyName || e.name}
+                      {e.verified ? " ✓" : ""}
+                    </span>
+                    <button
+                      onClick={() => unfollowEmployer(e.id)}
+                      className="shrink-0 text-xs font-medium text-zinc-400 hover:text-rose-500 hover:underline"
+                    >
+                      Unfollow
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
 
           <Card>

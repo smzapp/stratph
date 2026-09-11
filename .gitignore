@@ -1,6 +1,8 @@
 # This is a two-package repo (backend/ + frontend/); each package also has
 # its own .gitignore. These are repo-wide safety nets / root-level extras.
 
+documentations/*
+
 # Dependencies
 **/node_modules
 

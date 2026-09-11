@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/store";
@@ -12,7 +12,8 @@ import {
   isSubscriptionActive,
   timeAgo,
 } from "@/lib/helpers";
-import { ROLES } from "@/lib/types";
+import { PIPELINE_STAGES, ROLES } from "@/lib/types";
+import type { PipelineStage } from "@/lib/types";
 import { Avatar, Badge, Button, Card, EmptyState, Input, PageHeader, Select, Textarea } from "@/components/ui/Primitives";
 import { Modal } from "@/components/ui/Modal";
 import { CATEGORIES, JOB_TYPES } from "@/lib/constants";
@@ -31,7 +32,15 @@ const MIN_EXPERIENCE_OPTIONS = [
   { label: "5+ years", value: "5" },
 ];
 
-type ComposerMode = "invite" | "recommend" | null;
+const STAGE_LABELS: Record<PipelineStage, string> = {
+  sourced: "Sourced",
+  contacted: "Contacted",
+  trial_sent: "Trial Sent",
+  hired: "Hired",
+  rejected: "Rejected",
+};
+
+type ComposerMode = "invite" | "recommend" | "save" | "pipeline" | null;
 
 function TrialTaskCombobox({
   options,
@@ -109,7 +118,20 @@ function TrialTaskCombobox({
 
 export default function ReverseHiringSearch() {
   const router = useRouter();
-  const { db, currentUser, recordProfileView, inviteToMicroJob, startConversation, addRecommendation } = useApp();
+  const {
+    db,
+    currentUser,
+    recordProfileView,
+    inviteToMicroJob,
+    startConversation,
+    addRecommendation,
+    talentLists,
+    loadTalentLists,
+    createTalentList,
+    addToTalentList,
+    pipeline,
+    setPipelineStage,
+  } = useApp();
   const [query, setQuery] = useState("");
   const [recency, setRecency] = useState("any");
   const [activeSkill, setActiveSkill] = useState("All");
@@ -127,6 +149,15 @@ export default function ReverseHiringSearch() {
   const [inviting, setInviting] = useState(false);
   const [messaging, setMessaging] = useState(false);
   const [recommending, setRecommending] = useState(false);
+  const [newListName, setNewListName] = useState("");
+  const [savingToList, setSavingToList] = useState(false);
+  const [savedToListIds, setSavedToListIds] = useState<string[]>([]);
+  const [pipelineStageChoice, setPipelineStageChoice] = useState<PipelineStage>("sourced");
+  const [addingToPipeline, setAddingToPipeline] = useState(false);
+
+  useEffect(() => {
+    loadTalentLists();
+  }, [loadTalentLists]);
 
   const isSubscribed = isSubscriptionActive(currentUser);
   const myOpenMicroJobs = useMemo(
@@ -191,6 +222,8 @@ export default function ReverseHiringSearch() {
     setComposer(null);
     setInviteJobId("");
     setRecommendMessage("");
+    setNewListName("");
+    setPipelineStageChoice("sourced");
   }
 
   async function handleInvite(jobseekerId: string) {
@@ -222,6 +255,35 @@ export default function ReverseHiringSearch() {
       setRecommendedIds((prev) => [...prev, jobseekerId]);
       resetComposer();
     }
+  }
+
+  async function handleSaveToExistingList(listId: string, jobseekerId: string) {
+    setSavingToList(true);
+    const ok = await addToTalentList(listId, jobseekerId);
+    setSavingToList(false);
+    if (ok) {
+      setSavedToListIds((prev) => [...prev, jobseekerId]);
+      resetComposer();
+    }
+  }
+
+  async function handleSaveToNewList(jobseekerId: string) {
+    if (!newListName.trim()) return;
+    setSavingToList(true);
+    const created = await createTalentList(newListName.trim());
+    if (created) {
+      await addToTalentList(created.id, jobseekerId);
+      setSavedToListIds((prev) => [...prev, jobseekerId]);
+      resetComposer();
+    }
+    setSavingToList(false);
+  }
+
+  async function handleAddToPipeline(jobseekerId: string) {
+    setAddingToPipeline(true);
+    const ok = await setPipelineStage(jobseekerId, pipelineStageChoice);
+    setAddingToPipeline(false);
+    if (ok) resetComposer();
   }
 
   return (
@@ -388,6 +450,22 @@ export default function ReverseHiringSearch() {
                     >
                       {recommendedIds.includes(selected.candidate.id) ? "Recommended ✓" : "Recommend"}
                     </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 sm:flex-none"
+                      onClick={() => setComposer("save")}
+                    >
+                      {savedToListIds.includes(selected.candidate.id) ? "Saved ✓" : "Save to list"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 sm:flex-none"
+                      onClick={() => setComposer("pipeline")}
+                    >
+                      {pipeline.some((p) => p.jobseekerId === selected.candidate.id) ? "In pipeline ✓" : "Add to pipeline"}
+                    </Button>
                   </div>
                   {isSubscribed && myOpenMicroJobs.length === 0 ? (
                     <p className="text-xs text-zinc-400">Post an open Trial Task to be able to invite this candidate.</p>
@@ -406,7 +484,7 @@ export default function ReverseHiringSearch() {
                     </Button>
                   </div>
                 </div>
-              ) : (
+              ) : composer === "recommend" ? (
                 <div className="space-y-2">
                   <Textarea
                     rows={3}
@@ -425,6 +503,63 @@ export default function ReverseHiringSearch() {
                       onClick={() => handleRecommend(selected.candidate.id)}
                     >
                       {recommending ? "Sending…" : "Send recommendation"}
+                    </Button>
+                  </div>
+                </div>
+              ) : composer === "save" ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-zinc-500">Save this candidate to a list</p>
+                  {talentLists.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {talentLists.map((list) => (
+                        <Button
+                          key={list.id}
+                          size="sm"
+                          variant="outline"
+                          disabled={savingToList}
+                          onClick={() => handleSaveToExistingList(list.id, selected.candidate.id)}
+                        >
+                          + {list.name}
+                        </Button>
+                      ))}
+                    </div>
+                  ) : null}
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Or create a new list…"
+                      value={newListName}
+                      onChange={(e) => setNewListName(e.target.value)}
+                    />
+                    <Button
+                      size="sm"
+                      disabled={!newListName.trim() || savingToList}
+                      onClick={() => handleSaveToNewList(selected.candidate.id)}
+                    >
+                      {savingToList ? "Saving…" : "Create & save"}
+                    </Button>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button size="sm" variant="outline" onClick={resetComposer}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-zinc-500">Track this candidate in your hiring pipeline</p>
+                  <Select value={pipelineStageChoice} onChange={(e) => setPipelineStageChoice(e.target.value as PipelineStage)}>
+                    {PIPELINE_STAGES.map((s) => (
+                      <option key={s} value={s}>
+                        {STAGE_LABELS[s]}
+                      </option>
+                    ))}
+                  </Select>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                    <Button size="sm" variant="outline" onClick={resetComposer}>
+                      Cancel
+                    </Button>
+                    <Button size="sm" disabled={addingToPipeline} onClick={() => handleAddToPipeline(selected.candidate.id)}>
+                      {addingToPipeline ? "Adding…" : "Add to pipeline"}
                     </Button>
                   </div>
                 </div>

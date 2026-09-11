@@ -9,6 +9,8 @@ import { MicroJobsController } from './micro-jobs.controller.js';
 import { SettingsModule } from '../settings/settings.module.js';
 import { UsersModule } from '../users/users.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
+import { FollowsModule } from '../follows/follows.module.js';
+import { JobAlertsModule } from '../job-alerts/job-alerts.module.js';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { NotificationsModule } from '../notifications/notifications.module.js';
     SettingsModule,
     UsersModule,
     NotificationsModule,
+    FollowsModule,
+    JobAlertsModule,
   ],
   controllers: [MicroJobsController],
   providers: [MicroJobsService],

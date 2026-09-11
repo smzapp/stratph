@@ -11,6 +11,7 @@ const NAV: NavItem[] = [
   { href: "/dashboard/employer/micro-jobs", label: "Trial Tasks", icon: "⚡" },
   { href: "/dashboard/employer/search", label: "Reverse Hiring", icon: "🧭" },
   { href: "/dashboard/employer/jobs", label: "Job Postings", icon: "📋" },
+  { href: "/dashboard/employer/talent-pool", label: "Talent Pool", icon: "💼" },
   { href: "/dashboard/employer/messages", label: "Messages", icon: "💬" },
   { href: "/pricing", label: "Pricing", icon: "💳" },
 ];

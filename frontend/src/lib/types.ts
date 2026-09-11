@@ -126,6 +126,58 @@ export interface ConversationSummary {
   createdAt: string;
 }
 
+export interface FollowedEmployer {
+  id: string;
+  name: string;
+  companyName: string | null;
+  verified: boolean | null;
+  followedAt: string;
+}
+
+export interface TalentListSummary {
+  id: string;
+  name: string;
+  createdAt: string;
+  memberCount: number;
+}
+
+export interface TalentListMember {
+  jobseekerId: string;
+  name: string;
+  headline: string | null;
+  addedAt: string;
+}
+
+export const PIPELINE_STAGES = ["sourced", "contacted", "trial_sent", "hired", "rejected"] as const;
+export type PipelineStage = (typeof PIPELINE_STAGES)[number];
+
+export interface PipelineEntry {
+  jobseekerId: string;
+  name: string;
+  headline: string | null;
+  stage: PipelineStage;
+  updatedAt: string;
+}
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  isOwner: boolean;
+}
+
+export interface PendingTeamInvite {
+  id: string;
+  email: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface TeamInfo {
+  members: TeamMember[];
+  pendingInvites: PendingTeamInvite[];
+}
+
 // A single, loosely-typed User shape (role-specific fields are optional)
 // rather than a discriminated union — the mock DB stores every role in one
 // array and most UI reads fields defensively (`user.companyName || user.name`).
@@ -142,7 +194,9 @@ export interface User {
   verified?: boolean;
   subscriptionPlan?: SubscriptionPlan | null;
   subscriptionExpiresAt?: string | null;
+  teamOwnerId?: string | null;
   // jobseeker-only
+  jobAlertsEnabled?: boolean;
   headline?: string;
   location?: string;
   skills?: string[];
@@ -289,6 +343,7 @@ export interface RegisterEmployerInput {
   name: string;
   companyName: string;
   companyBlurb?: string;
+  inviteToken?: string;
 }
 
 export interface LoginResult {
@@ -315,6 +370,7 @@ export interface ProfilePatch {
   portfolioLinks?: PortfolioLink[];
   languages?: string[];
   availability?: Availability | null;
+  jobAlertsEnabled?: boolean;
 }
 
 export interface PublicProfile {
@@ -445,4 +501,27 @@ export interface AppContextValue {
   deleteMessage: (conversationId: string, messageId: string) => Promise<ChatMessage | null>;
   closeConversation: (conversationId: string) => Promise<boolean>;
   setConversationArchived: (conversationId: string, archived: boolean) => Promise<boolean>;
+
+  followedEmployers: FollowedEmployer[];
+  loadFollowedEmployers: () => Promise<void>;
+  followEmployer: (employerId: string) => Promise<boolean>;
+  unfollowEmployer: (employerId: string) => Promise<boolean>;
+
+  talentLists: TalentListSummary[];
+  loadTalentLists: () => Promise<void>;
+  createTalentList: (name: string) => Promise<TalentListSummary | null>;
+  deleteTalentList: (listId: string) => Promise<boolean>;
+  addToTalentList: (listId: string, jobseekerId: string) => Promise<boolean>;
+  removeFromTalentList: (listId: string, jobseekerId: string) => Promise<boolean>;
+  getTalentListMembers: (listId: string) => Promise<TalentListMember[]>;
+
+  pipeline: PipelineEntry[];
+  loadPipeline: () => Promise<void>;
+  setPipelineStage: (jobseekerId: string, stage: PipelineStage) => Promise<boolean>;
+  removeFromPipeline: (jobseekerId: string) => Promise<boolean>;
+
+  team: TeamInfo | null;
+  loadTeam: () => Promise<void>;
+  inviteTeammate: (email: string) => Promise<boolean>;
+  removeTeammate: (teammateId: string) => Promise<boolean>;
 }

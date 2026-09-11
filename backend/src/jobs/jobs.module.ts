@@ -5,9 +5,11 @@ import { JobsService } from './jobs.service.js';
 import { JobsController } from './jobs.controller.js';
 import { UsersModule } from '../users/users.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
+import { FollowsModule } from '../follows/follows.module.js';
+import { JobAlertsModule } from '../job-alerts/job-alerts.module.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Job]), UsersModule, NotificationsModule],
+  imports: [TypeOrmModule.forFeature([Job]), UsersModule, NotificationsModule, FollowsModule, JobAlertsModule],
   controllers: [JobsController],
   providers: [JobsService],
   exports: [JobsService],

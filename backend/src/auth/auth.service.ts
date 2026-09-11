@@ -9,6 +9,7 @@ import { toSafeUser } from '../users/user.entity.js';
 import type { SafeUser } from '../users/user.entity.js';
 import { NotificationType, Role, UserStatus } from '../common/enums.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { TalentService } from '../talent/talent.service.js';
 import { PasswordResetToken } from './password-reset-token.entity.js';
 import type { RegisterJobseekerDto } from './dto/register-jobseeker.dto.js';
 import type { RegisterEmployerDto } from './dto/register-employer.dto.js';
@@ -26,6 +27,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly notificationsService: NotificationsService,
+    private readonly talentService: TalentService,
     @InjectRepository(PasswordResetToken)
     private readonly resetTokenRepo: Repository<PasswordResetToken>,
   ) {}
@@ -51,23 +53,64 @@ export class AuthService {
   }
 
   async registerEmployer(dto: RegisterEmployerDto): Promise<AuthResult> {
+    let teamOwnerId: string | undefined;
+    let companyName = dto.companyName;
+    let inheritedVerified: boolean | undefined;
+    let inheritedSubscriptionPlan: string | null | undefined;
+    let inheritedSubscriptionExpiresAt: Date | null | undefined;
+
+    if (dto.inviteToken) {
+      // Check the email matches before consuming the invite — otherwise a
+      // typo'd email would burn a one-time invite for no reason.
+      const preview = await this.talentService.getInvitePreview(dto.inviteToken);
+      if (dto.email.trim().toLowerCase() !== preview.invitedEmail) {
+        throw new BadRequestException('This invite was sent to a different email address.');
+      }
+      const consumed = await this.talentService.consumeInvite(dto.inviteToken);
+      if (!consumed) throw new BadRequestException('This invite link is invalid or has expired.');
+      teamOwnerId = consumed.teamOwnerId;
+      // The invite locks in the inviting company's name — a teammate can't
+      // register under a different company than the team they're joining.
+      companyName = consumed.companyName;
+      const owner = await this.usersService.findById(consumed.teamOwnerId);
+      inheritedVerified = owner.verified ?? false;
+      inheritedSubscriptionPlan = owner.subscriptionPlan;
+      inheritedSubscriptionExpiresAt = owner.subscriptionExpiresAt;
+    }
+
     const user = await this.usersService.createUser({
       email: dto.email,
       password: dto.password,
       role: Role.EMPLOYER,
       name: dto.name,
-      companyName: dto.companyName,
+      companyName,
       companyBlurb: dto.companyBlurb,
+      teamOwnerId,
+      verified: inheritedVerified,
+      subscriptionPlan: inheritedSubscriptionPlan,
+      subscriptionExpiresAt: inheritedSubscriptionExpiresAt,
     });
 
-    const admins = await this.usersService.findByRole(Role.ADMIN);
-    await this.notificationsService.notifyMany(
-      admins.map((a) => a.id),
-      NotificationType.EMPLOYER_PENDING_VERIFICATION,
-      'New employer awaiting verification',
-      `${user.companyName || user.name} just registered and is not yet verified.`,
-      '/dashboard/admin/users',
-    );
+    if (teamOwnerId) {
+      await this.notificationsService.notify(
+        teamOwnerId,
+        NotificationType.TEAM_INVITE_ACCEPTED,
+        'Your teammate joined',
+        `${user.name} (${user.email}) joined your hiring team on StratPH.`,
+        '/dashboard/employer/talent-pool?tab=team',
+      );
+    }
+
+    if (!user.verified) {
+      const admins = await this.usersService.findByRole(Role.ADMIN);
+      await this.notificationsService.notifyMany(
+        admins.map((a) => a.id),
+        NotificationType.EMPLOYER_PENDING_VERIFICATION,
+        'New employer awaiting verification',
+        `${user.companyName || user.name} just registered and is not yet verified.`,
+        '/dashboard/admin/users',
+      );
+    }
 
     return { accessToken: this.issueToken(user.id, user.role), user: toSafeUser(user) };
   }

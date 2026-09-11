@@ -72,7 +72,17 @@ export class User {
   @Column({ type: 'datetime', nullable: true })
   subscriptionExpiresAt!: Date | null;
 
+  // Shared team scope for employers: a teammate's records point at the team
+  // owner's id so Talent Pool lists / pipeline / invites can all be queried
+  // by one consistent "team scope" id (the owner's own id, when they're not
+  // a teammate themselves). Null means this employer is their own team root.
+  @Column({ type: 'text', nullable: true })
+  teamOwnerId!: string | null;
+
   // Jobseeker-only fields
+  @Column({ type: 'boolean', default: true })
+  jobAlertsEnabled!: boolean;
+
   @Column({ type: 'text', nullable: true })
   headline!: string | null;
 

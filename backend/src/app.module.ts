@@ -16,6 +16,10 @@ import { NotificationsModule } from './notifications/notifications.module.js';
 import { ReportsModule } from './reports/reports.module.js';
 import { RecommendationsModule } from './recommendations/recommendations.module.js';
 import { ConversationsModule } from './conversations/conversations.module.js';
+import { MailModule } from './mail/mail.module.js';
+import { FollowsModule } from './follows/follows.module.js';
+import { JobAlertsModule } from './job-alerts/job-alerts.module.js';
+import { TalentModule } from './talent/talent.module.js';
 
 @Module({
   imports: [
@@ -42,6 +46,10 @@ import { ConversationsModule } from './conversations/conversations.module.js';
     ReportsModule,
     RecommendationsModule,
     ConversationsModule,
+    MailModule,
+    FollowsModule,
+    JobAlertsModule,
+    TalentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

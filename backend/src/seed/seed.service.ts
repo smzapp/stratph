@@ -11,12 +11,17 @@ import { Offer } from '../offers/offer.entity.js';
 import { ProfileView } from '../users/profile-view.entity.js';
 import { Report } from '../reports/report.entity.js';
 import { Recommendation } from '../recommendations/recommendation.entity.js';
+import { Follow } from '../follows/follow.entity.js';
+import { TalentList } from '../talent/talent-list.entity.js';
+import { TalentListMember } from '../talent/talent-list-member.entity.js';
+import { CandidatePipelineEntry } from '../talent/candidate-pipeline-entry.entity.js';
 import {
   ActivityType,
   ApplicantStatus,
   MicroJobStatus,
   ModerationStatus,
   OfferStatus,
+  PipelineStage,
   ReportReason,
   Role,
   SubscriptionPlan,
@@ -75,6 +80,11 @@ export class SeedService implements OnApplicationBootstrap {
     @InjectRepository(ProfileView) private readonly profileViewsRepo: Repository<ProfileView>,
     @InjectRepository(Report) private readonly reportsRepo: Repository<Report>,
     @InjectRepository(Recommendation) private readonly recommendationsRepo: Repository<Recommendation>,
+    @InjectRepository(Follow) private readonly followsRepo: Repository<Follow>,
+    @InjectRepository(TalentList) private readonly talentListsRepo: Repository<TalentList>,
+    @InjectRepository(TalentListMember) private readonly talentListMembersRepo: Repository<TalentListMember>,
+    @InjectRepository(CandidatePipelineEntry)
+    private readonly pipelineRepo: Repository<CandidatePipelineEntry>,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
@@ -432,6 +442,33 @@ export class SeedService implements OnApplicationBootstrap {
         }),
       );
     }
+
+    // Demo data for follows / Talent Pool / pipeline so those features have
+    // something to show right after a fresh seed, without manual setup.
+    await this.followsRepo.save(this.followsRepo.create({ jobseekerId: jobseeker1.id, employerId: employer1.id }));
+
+    const demoList = await this.talentListsRepo.save(
+      this.talentListsRepo.create({ ownerTeamId: employer1.id, name: 'Top React Devs', createdBy: employer1.id }),
+    );
+    await this.talentListMembersRepo.save([
+      this.talentListMembersRepo.create({ listId: demoList.id, jobseekerId: jobseeker1.id, addedBy: employer1.id }),
+      this.talentListMembersRepo.create({ listId: demoList.id, jobseekerId: jobseeker4.id, addedBy: employer1.id }),
+    ]);
+
+    await this.pipelineRepo.save([
+      this.pipelineRepo.create({
+        ownerTeamId: employer1.id,
+        jobseekerId: jobseeker2.id,
+        stage: PipelineStage.CONTACTED,
+        updatedBy: employer1.id,
+      }),
+      this.pipelineRepo.create({
+        ownerTeamId: employer1.id,
+        jobseekerId: jobseeker4.id,
+        stage: PipelineStage.TRIAL_SENT,
+        updatedBy: employer1.id,
+      }),
+    ]);
 
     // Regular job postings
     await this.jobsRepo.save(

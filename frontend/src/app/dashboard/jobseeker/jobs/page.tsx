@@ -6,6 +6,7 @@ import { useApp } from "@/lib/store";
 import { getUserById, timeAgo } from "@/lib/helpers";
 import { Badge, Button, Card, EmptyState, Input, PageHeader, Select } from "@/components/ui/Primitives";
 import { ReportEmployerButton } from "@/components/ReportEmployerButton";
+import { FollowEmployerButton } from "@/components/FollowEmployerButton";
 import { JOB_TYPES } from "@/lib/constants";
 
 export default function BrowseJobs() {
@@ -114,7 +115,8 @@ export default function BrowseJobs() {
                     {employer?.companyName} · {job.location} · {job.salaryRange}
                   </p>
                   {employer ? (
-                    <div className="mt-1">
+                    <div className="mt-1 flex items-center gap-3">
+                      <FollowEmployerButton employerId={employer.id} />
                       <ReportEmployerButton
                         employerId={employer.id}
                         employerName={employer.companyName || employer.name}

@@ -1,484 +1,539 @@
+"use client";
+
+import { useState } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { Button, Badge } from "@/components/ui/Primitives";
 
-const MICRO_JOB_TICKETS: { title: string; pay: string; category: string; rotate: string }[] = [
-  { title: "Convert a PDF to Excel", pay: "₱800", category: "Data Entry", rotate: "-rotate-2" },
-  { title: "Fix one React component", pay: "₱1,500", category: "Web Dev", rotate: "rotate-1" },
-  { title: "Edit one 60s reel", pay: "₱1,200", category: "Video", rotate: "-rotate-1" },
-  { title: "Answer 20 support emails", pay: "₱600", category: "Support", rotate: "rotate-2" },
+type Audience = "seeker" | "employer";
+
+const CONTAINER = "mx-auto w-full max-w-[1180px] px-[clamp(18px,4vw,40px)]";
+
+const NAV_LINKS = [
+  { href: "#how", label: "How it works" },
+  { href: "#escrow", label: "Escrow" },
+  { href: "#features", label: "Features" },
+  { href: "#pricing", label: "Pricing" },
 ];
 
-const AUDIENCES = ["Skilled Professionals", "Fresh Graduates", "Students", "Career Shifters"];
-
-const STEPS: { icon: string; title: string; body: string }[] = [
-  { icon: "🎯", title: "Try", body: "Take a small task straight from the listing — no interview required. The employer's payment is already held in escrow." },
-  { icon: "💪", title: "Prove", body: "Deliver real work. Once the employer approves your submission, the escrowed ₱ is released straight to you." },
-  { icon: "🚀", title: "Hire", body: "Nail it, and the employer can upgrade you to part-time, contract, or full-time on the spot." },
+const HERO_TICKETS = [
+  { meta: "Data entry · 2 hrs", title: "Convert a PDF to Excel", pay: "₱800" },
+  { meta: "Web dev · 1 day", title: "Fix one React component", pay: "₱1,500" },
+  { meta: "Video · 3 hrs", title: "Edit one 60s reel", pay: "₱1,200" },
 ];
 
-const ESCROW_STEPS: { icon: string; title: string; body: string }[] = [
-  { icon: "🔐", title: "Employer funds escrow", body: "A subscribed employer posts a Trial Task and its pay is held by StratPH — not sent directly to anyone yet." },
-  { icon: "📤", title: "Jobseeker delivers", body: "The jobseeker does the work and submits it for review. No money changes hands during this step." },
-  { icon: "✅", title: "Approve → release", body: "Employer approves the work and the held amount is released to the jobseeker instantly. Rejected work refunds the employer." },
+const SEEKER_TAGS = ["Fresh graduates", "Career shifters", "Students", "Skilled professionals"];
+const EMPLOYER_TAGS = ["Startups", "Agencies", "BPOs", "SMEs hiring their first dev"];
+
+const REVERSE_PEOPLE = [
+  { initials: "JD", name: "Juan Dela Cruz", skills: "React · Next.js · AWS", verified: "3 tasks verified" },
+  { initials: "LT", name: "Liza Tan", skills: "Node.js · AWS · Docker", verified: "5 tasks verified" },
 ];
 
-const OLD_WAY = [
-  "Apply with a resume and hope it gets opened",
-  "Wait weeks for an interview slot",
-  "Get judged on how well you interview, not how well you work",
-  "Get a vague match score with zero explanation",
-  "Rejected with no feedback, no pay, no proof of effort",
+const STATS = [
+  { value: "₱300–₱3k", label: "per paid work trial" },
+  { value: "0", label: "interviews required" },
+  { value: "100%", label: "held in escrow until approved" },
+  { value: "3", label: "role-based dashboards" },
 ];
 
-const STRATPH_WAY = [
-  "Take a ₱300–₱3,000 paid work trial — today",
-  "Get reviewed on real, delivered work",
-  "Get paid securely once your work is approved — funds are held in escrow from day one",
-  "See exactly which skills you're missing — not just a percentage",
-  "Build a public track record employers can search",
+const SEEKER_STEPS = [
+  { title: "Try", body: "Pick a small task straight from the listing. No interview, no cover letter. The employer's payment is already funded." },
+  { title: "Prove", body: "Deliver the work. On approval the escrowed ₱ goes straight to you — and the task joins your public track record." },
+  { title: "Hire", body: "Nail it and the employer can upgrade you to part-time, contract, or full-time on the spot. Paid either way." },
 ];
 
-const DASHBOARDS: { icon: string; title: string; body: string; tone: "indigo" | "emerald" | "amber" }[] = [
-  { icon: "🧑‍💻", title: "Jobseeker", body: "Browse Trial Tasks, close your skill gaps, submit work, and get paid the moment your submission is approved.", tone: "indigo" },
-  { icon: "🏢", title: "Employer", body: "Subscribe to post Trial Tasks, fund escrow per task, review submissions, and search verified talent.", tone: "emerald" },
-  { icon: "🛡️", title: "Super Admin", body: "Moderate postings, verify employers, resolve reports, and watch trial-to-hire conversion across the platform.", tone: "amber" },
+const EMPLOYER_STEPS = [
+  { title: "Post & fund", body: "Describe one real piece of work and set its fee. StratPH holds the amount in escrow so candidates know it's genuine." },
+  { title: "Review real output", body: "Compare delivered work instead of résumés. Approve to release payment, or reject and get the escrow refunded." },
+  { title: "Upgrade the winner", body: "Convert a proven performer to part-time, contract, or full-time — with evidence, not a gut call from a 30-minute call." },
 ];
+
+const ESCROW_STEPS = [
+  { title: "Employer funds the task", body: "The fee is held by StratPH — not sent to anyone yet." },
+  { title: "Jobseeker delivers", body: "Work is submitted for review. No money changes hands during this step." },
+  { title: "Approve — release", body: "Approved work pays out instantly. Rejected work refunds the employer." },
+];
+
+const FEATURE_TICKETS = [
+  { label: "DATA ENTRY", title: "Convert a PDF to Excel", price: "₱800" },
+  { label: "WEB DEV", title: "Fix one React component", price: "₱1,500" },
+  { label: "VIDEO", title: "Edit one 60s reel", price: "₱1,200" },
+  { label: "SUPPORT", title: "Answer 20 support emails", price: "₱600" },
+];
+
+const GAP_SKILLS = ["TypeScript", "CSS Grid", "Git flow"];
 
 export default function Home() {
+  const [audience, setAudience] = useState<Audience>("seeker");
+  const seeker = audience === "seeker";
+  const accent = seeker ? "text-seeker" : "text-employer";
+  const accentBg = seeker ? "bg-seeker" : "bg-employer";
+
   return (
-    <div className="flex flex-1 flex-col overflow-x-clip bg-white">
-      {/* Nav */}
-      <header className="sticky top-0 z-40 border-b border-zinc-100 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
-              SP
-            </div>
-            <span className="text-sm font-semibold text-zinc-900">StratPH</span>
-          </div>
-          <nav className="hidden items-center gap-6 text-sm font-medium text-zinc-500 sm:flex">
-            <a href="#how-it-works" className="hover:text-zinc-900">How it works</a>
-            <a href="#features" className="hover:text-zinc-900">Features</a>
-            <a href="#dashboards" className="hover:text-zinc-900">Dashboards</a>
-            <Link href="/pricing" className="hover:text-zinc-900">Pricing</Link>
+    <div
+      id="top"
+      className="font-archivo min-h-screen overflow-x-hidden bg-paper text-ink"
+      style={{ colorScheme: "light" }}
+    >
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-paper-line bg-paper/88 backdrop-blur-md">
+        <div className={`${CONTAINER} flex items-center gap-5 py-3.5`}>
+          <Link href="#top" className="flex items-center gap-[9px] text-[17px] font-bold tracking-[-0.02em] text-ink">
+            <span className="grid h-[26px] w-[26px] place-items-center rounded-[7px] bg-ink font-plex-mono text-[12px] font-medium text-white">
+              S
+            </span>
+            StratPH
+          </Link>
+
+          <nav className="ml-[18px] hidden gap-[26px] text-[14.5px] text-ink-soft max-[940px]:hidden md:flex">
+            {NAV_LINKS.map((l) => (
+              <a key={l.href} href={l.href} className="hover:text-ink">
+                {l.label}
+              </a>
+            ))}
           </nav>
-          <Link href="/login">
-            <Button variant="outline" size="sm">Log in</Button>
+
+          <div className="flex-1" />
+
+          <div className="flex items-center gap-1 rounded-full border border-paper-line bg-paper-chip p-[3px]">
+            <button
+              type="button"
+              onClick={() => setAudience("seeker")}
+              className={`rounded-full px-3.5 py-[7px] font-archivo text-[13px] font-semibold transition-colors ${
+                seeker ? "bg-white text-ink shadow-[0_1px_3px_oklch(0.3_0.02_265/0.18)]" : "bg-transparent text-ink-soft"
+              }`}
+            >
+              Jobseekers
+            </button>
+            <button
+              type="button"
+              onClick={() => setAudience("employer")}
+              className={`rounded-full px-3.5 py-[7px] font-archivo text-[13px] font-semibold transition-colors ${
+                !seeker ? "bg-white text-ink shadow-[0_1px_3px_oklch(0.3_0.02_265/0.18)]" : "bg-transparent text-ink-soft"
+              }`}
+            >
+              Employers
+            </button>
+          </div>
+
+          <Link
+            href="/login"
+            className="max-[560px]:hidden rounded-lg border border-paper-line-faint px-4 py-2 text-[14px] font-semibold text-ink"
+          >
+            Log in
           </Link>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="relative isolate">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-[32rem] w-[64rem] -translate-x-1/2 rounded-full bg-gradient-to-tr from-indigo-200 via-sky-100 to-amber-100 opacity-60 blur-3xl"
-        />
-        <div className="mx-auto grid w-full max-w-6xl gap-12 px-6 pb-20 pt-14 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:pt-20">
-          <div>
-            <Badge tone="indigo">For every stage of your career</Badge>
-            <h1 className="mt-5 text-4xl font-semibold leading-[1.1] tracking-tight text-zinc-900 sm:text-5xl">
-              Not another job board.
-              <br />
-              <span className="bg-gradient-to-r from-indigo-600 to-sky-500 bg-clip-text text-transparent">
-                Show your skills. Get hired.
-              </span>
-            </h1>
-            <p className="mt-5 max-w-lg text-lg leading-relaxed text-zinc-500">
-              StratPH replaces{" "}
-              <span className="text-zinc-400 line-through decoration-2">
-                Apply → Interview → Reject
-              </span>{" "}
-              with <span className="font-semibold text-zinc-800">Try → Prove → Hire</span> — paid
-              work trials that let you show real, hands-on skills, an AI tool that tells you
-              exactly what to learn next, and a search engine that finds you by what
-              you&apos;ve actually done.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href="/register/jobseeker">
-                <Button size="lg" className="w-full sm:w-auto">
-                  I&apos;m looking for work
-                </Button>
-              </Link>
-              <Link href="/register/employer">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto">
-                  I&apos;m hiring
-                </Button>
-              </Link>
-            </div>
-            <div className="mt-5 flex flex-wrap gap-2">
-              {AUDIENCES.map((a) => (
-                <Badge key={a} tone="zinc">
-                  {a}
-                </Badge>
-              ))}
-            </div>
-            <div className="mt-8 grid grid-cols-2 gap-6 border-t border-zinc-100 pt-6 sm:grid-cols-4">
-              <div>
-                <p className="text-2xl font-semibold text-zinc-900">₱300–₱3k</p>
-                <p className="text-xs text-zinc-400">per paid work trial</p>
-              </div>
-              <div>
-                <p className="text-2xl font-semibold text-zinc-900">0</p>
-                <p className="text-xs text-zinc-400">interviews required</p>
-              </div>
-              <div>
-                <p className="text-2xl font-semibold text-zinc-900">🔒</p>
-                <p className="text-xs text-zinc-400">held in escrow until approved</p>
-              </div>
-              <div>
-                <p className="text-2xl font-semibold text-zinc-900">3</p>
-                <p className="text-xs text-zinc-400">role-based dashboards</p>
-              </div>
-            </div>
-          </div>
+      <main className={CONTAINER}>
+        {/* Hero */}
+        <section className="pt-[clamp(48px,7vw,88px)]">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(330px,1fr))] items-center gap-[clamp(36px,5vw,64px)]">
+            <div>
+              {seeker ? (
+                <span className="inline-flex items-center gap-2 rounded-[6px] bg-seeker-tint px-[11px] py-[6px] font-plex-mono text-[11.5px] uppercase tracking-[0.08em] text-seeker">
+                  For jobseekers
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-2 rounded-[6px] bg-employer-tint px-[11px] py-[6px] font-plex-mono text-[11.5px] uppercase tracking-[0.08em] text-employer">
+                  For employers
+                </span>
+              )}
 
-          {/* Reverse Hiring search mock */}
-          <div className="relative">
-            <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl shadow-indigo-100">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                Reverse Hiring search
+              <h1 className="mt-5 text-balance text-[clamp(38px,6.2vw,68px)] font-bold leading-[0.98] tracking-[-0.035em]">
+                {seeker ? (
+                  <>
+                    Get paid to prove it.
+                    <br />
+                    <span className="text-seeker">Skip the interview.</span>
+                  </>
+                ) : (
+                  <>
+                    See the work
+                    <br />
+                    <span className="text-employer">before you hire.</span>
+                  </>
+                )}
+              </h1>
+
+              <p className="mt-[22px] max-w-[46ch] text-pretty text-[clamp(16px,1.4vw,18.5px)] leading-[1.55] text-ink-soft">
+                {seeker
+                  ? "Take a small paid task — ₱300 to ₱3,000 — straight from the listing. Deliver it, get paid from escrow, and turn it into a real job. No resume roulette, no unpaid take-homes."
+                  : "Post a small paid Trial Task instead of a job ad. Review real, delivered work from real candidates — then upgrade the best one to part-time, contract, or full-time in one click."}
               </p>
-              <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-700">
-                <span className="text-zinc-400">🔎</span>
-                <span>React developer who deployed AWS in the last 30 days</span>
+
+              <div className="mt-[30px] flex flex-wrap gap-3">
+                <Link
+                  href={seeker ? "/register/jobseeker" : "/register/employer"}
+                  className={`rounded-[10px] px-6 py-3.5 text-[15.5px] font-semibold text-white ${accentBg}`}
+                >
+                  {seeker ? "Browse Trial Tasks" : "Post a Trial Task"}
+                </Link>
+                <a
+                  href={seeker ? "#how" : "#pricing"}
+                  className="rounded-[10px] border border-paper-line-faint bg-white px-6 py-3.5 text-[15.5px] font-semibold text-ink"
+                >
+                  {seeker ? "See how it works" : "See pricing"}
+                </a>
               </div>
-              <div className="mt-4 space-y-2">
-                <div className="flex items-center justify-between rounded-lg border border-indigo-100 bg-indigo-50/60 px-3 py-2.5">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-500 text-xs font-semibold text-white">
-                      JD
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-zinc-900">Juan Dela Cruz</p>
-                      <p className="text-xs text-zinc-500">React · Next.js · AWS</p>
-                    </div>
-                  </div>
-                  <Badge tone="emerald">active 16d ago</Badge>
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-zinc-100 bg-zinc-50 px-3 py-2.5 opacity-70">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-500 text-xs font-semibold text-white">
-                      LT
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-zinc-900">Liza Tan</p>
-                      <p className="text-xs text-zinc-500">Node.js · AWS · Docker</p>
-                    </div>
-                  </div>
-                  <Badge tone="zinc">active 22d ago</Badge>
-                </div>
-              </div>
-            </div>
 
-            {/* Scattered micro-job tickets */}
-            <div className="mt-6 hidden gap-4 sm:grid sm:grid-cols-2">
-              {MICRO_JOB_TICKETS.slice(0, 2).map((t) => (
-                <TicketCard key={t.title} ticket={t} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Old way vs StratPH */}
-      <section className="border-y border-zinc-100 bg-zinc-50/60 py-16">
-        <div className="mx-auto w-full max-w-6xl px-6">
-          <div className="mb-10 text-center">
-            <Badge tone="rose">The old way is broken</Badge>
-            <h2 className="mt-3 text-2xl font-semibold text-zinc-900 sm:text-3xl">
-              Hiring shouldn&apos;t be a guessing game
-            </h2>
-          </div>
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div className="rounded-2xl border border-zinc-200 bg-white p-6">
-              <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-400">
-                Apply → Interview → Reject
-              </p>
-              <ul className="space-y-3">
-                {OLD_WAY.map((item) => (
-                  <li key={item} className="flex gap-2.5 text-sm text-zinc-500">
-                    <span className="mt-0.5 text-zinc-300">✕</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-6">
-              <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-indigo-600">
-                Try → Prove → Hire
-              </p>
-              <ul className="space-y-3">
-                {STRATPH_WAY.map((item) => (
-                  <li key={item} className="flex gap-2.5 text-sm text-zinc-700">
-                    <span className="mt-0.5 text-indigo-500">✓</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section id="how-it-works" className="py-20">
-        <div className="mx-auto w-full max-w-6xl px-6">
-          <div className="mb-12 text-center">
-            <Badge tone="indigo">How it works</Badge>
-            <h2 className="mt-3 text-2xl font-semibold text-zinc-900 sm:text-3xl">
-              A paid work trial, not a guessing game
-            </h2>
-          </div>
-          <div className="grid gap-6 sm:grid-cols-3">
-            {STEPS.map((step, i) => (
-              <div key={step.title} className="relative">
-                <div className="rounded-2xl border border-zinc-200 bg-white p-6">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-50 text-2xl">
-                    {step.icon}
-                  </div>
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-indigo-600">
-                    Step {i + 1}
-                  </p>
-                  <h3 className="mb-2 text-lg font-semibold text-zinc-900">{step.title}</h3>
-                  <p className="text-sm text-zinc-500">{step.body}</p>
-                </div>
-                {i < STEPS.length - 1 ? (
-                  <span className="absolute -right-4 top-1/2 hidden -translate-y-1/2 text-xl text-zinc-300 sm:block">
-                    →
+              <div className="mt-[26px] flex flex-wrap gap-2 text-[12.5px] text-ink-softer">
+                {(seeker ? SEEKER_TAGS : EMPLOYER_TAGS).map((tag) => (
+                  <span key={tag} className="rounded-full border border-paper-line-soft px-[11px] py-[5px]">
+                    {tag}
                   </span>
-                ) : null}
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-3">
+              {seeker ? (
+                <div className="rounded-[14px] border border-paper-line bg-white p-[18px] shadow-[0_18px_40px_-28px_oklch(0.3_0.05_265/0.5)]">
+                  <p className="font-plex-mono text-[10.5px] uppercase tracking-[0.09em] text-ink-faint">
+                    Open Trial Tasks near you
+                  </p>
+                  <div className="mt-[14px] grid gap-[10px]">
+                    {HERO_TICKETS.map((t) => (
+                      <div key={t.title} className="flex items-center gap-[14px] rounded-[10px] border border-paper-line-soft p-[13px]">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-plex-mono text-[10px] uppercase tracking-[0.08em] text-ink-faint">{t.meta}</div>
+                          <div className="mt-1 text-[15px] font-semibold">{t.title}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-[17px] font-bold">{t.pay}</div>
+                          <div className="text-[10.5px] text-verified-2">funded</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-[14px] border border-paper-line bg-white p-[18px] shadow-[0_18px_40px_-28px_oklch(0.3_0.05_265/0.5)]">
+                  <p className="font-plex-mono text-[10.5px] uppercase tracking-[0.09em] text-ink-faint">
+                    Reverse hiring search
+                  </p>
+                  <div className="mt-3 rounded-[9px] border border-paper-line-soft bg-paper-chip-2 px-[13px] py-[11px] font-plex-mono text-[12.5px] leading-[1.5] text-ink/90">
+                    React developer who deployed AWS in the last 30 days
+                  </div>
+                  <div className="mt-[14px] grid gap-[10px]">
+                    {REVERSE_PEOPLE.map((p) => (
+                      <div key={p.name} className="flex items-center gap-3 rounded-[10px] border border-paper-line-soft p-3">
+                        <div className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[9px] bg-[oklch(0.93_0.03_275)] text-[12px] font-semibold text-[oklch(0.4_0.15_275)]">
+                          {p.initials}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[14.5px] font-semibold">{p.name}</div>
+                          <div className="font-plex-mono text-[11.5px] text-ink-faint">{p.skills}</div>
+                        </div>
+                        <div className="whitespace-nowrap rounded-[6px] bg-verified-tint px-2 py-1 text-[10.5px] text-verified">
+                          {p.verified}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 text-[11.5px] leading-[1.5] text-ink-faint">
+                    Candidates surface because of what they shipped — not because they applied.
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-[14px] rounded-[14px] bg-ink px-[18px] py-4 text-white">
+                <div className="font-plex-mono text-[11px] leading-[1.5] tracking-[0.06em] opacity-85">
+                  {seeker
+                    ? "Every task is paid into escrow before you start. Approved work releases the same day."
+                    : "Your task budget sits in escrow. Approve the work to release it — reject it and you get it back."}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Stats */}
+        <section className="mt-[clamp(44px,6vw,72px)] grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-6 border-y border-paper-line py-[26px]">
+          {STATS.map((s) => (
+            <div key={s.label}>
+              <div className="text-[clamp(24px,2.6vw,30px)] font-bold tracking-[-0.03em]">{s.value}</div>
+              <div className="mt-1 text-[12.5px] text-ink-softer">{s.label}</div>
+            </div>
+          ))}
+        </section>
+
+        {/* How it works */}
+        <section id="how" className="pt-[clamp(56px,8vw,100px)]">
+          <div className="max-w-[620px]">
+            <p className="font-plex-mono text-[11.5px] uppercase tracking-[0.09em] text-ink-faint">How it works</p>
+            <h2 className="mt-3 text-[clamp(28px,3.8vw,42px)] font-bold leading-[1.05] tracking-[-0.03em]">
+              Try → Prove → Hire, replacing apply → interview → reject.
+            </h2>
+          </div>
+
+          <div className="mt-9 grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-[14px]">
+            {(seeker ? SEEKER_STEPS : EMPLOYER_STEPS).map((step, i) => (
+              <div key={step.title} className="rounded-[14px] border border-paper-line bg-white p-6">
+                <div className={`font-plex-mono text-[30px] font-medium leading-none ${accent}`}>
+                  {String(i + 1).padStart(2, "0")}
+                </div>
+                <div className="mt-4 text-[19px] font-bold tracking-[-0.02em]">{step.title}</div>
+                <p className="mt-2 text-[14.5px] leading-[1.6] text-ink-soft">{step.body}</p>
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* How escrow works */}
-      <section className="border-t border-zinc-100 bg-indigo-50/40 py-16">
-        <div className="mx-auto w-full max-w-6xl px-6">
-          <div className="mb-10 text-center">
-            <Badge tone="indigo">Escrow protected</Badge>
-            <h2 className="mt-3 text-2xl font-semibold text-zinc-900 sm:text-3xl">
-              Every Trial Task is funded before work starts
-            </h2>
-            <p className="mx-auto mt-3 max-w-xl text-sm text-zinc-500">
-              Employers subscribe to post Trial Tasks. StratPH holds each task&apos;s pay so
-              jobseekers know it&apos;s real, and releases it the moment the employer approves the
-              work.
-            </p>
-          </div>
-          <div className="grid gap-6 sm:grid-cols-3">
-            {ESCROW_STEPS.map((step, i) => (
-              <div key={step.title} className="relative">
-                <div className="h-full rounded-2xl border border-indigo-100 bg-white p-6 shadow-sm">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-2xl">
-                    {step.icon}
-                  </div>
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-indigo-600">
-                    {i + 1}
-                  </p>
-                  <h3 className="mb-2 text-base font-semibold text-zinc-900">{step.title}</h3>
-                  <p className="text-sm text-zinc-500">{step.body}</p>
-                </div>
-                {i < ESCROW_STEPS.length - 1 ? (
-                  <span className="absolute -right-4 top-1/2 hidden -translate-y-1/2 text-xl text-indigo-200 sm:block">
-                    →
-                  </span>
-                ) : null}
-              </div>
-            ))}
-          </div>
-          <p className="mx-auto mt-6 max-w-xl text-center text-xs text-zinc-400">
-            Demo prototype — escrow is simulated within StratPH for illustration. No real funds move.
-          </p>
-        </div>
-      </section>
-
-      {/* Killer features */}
-      <section id="features" className="border-t border-zinc-100 bg-zinc-50/60 py-20">
-        <div className="mx-auto w-full max-w-6xl px-6">
-          <div className="mb-12 text-center">
-            <Badge tone="amber">Three features that don&apos;t exist together anywhere else</Badge>
-          </div>
-
-          <div className="mb-16 grid items-center gap-8 lg:grid-cols-2">
-            <div>
-              <Badge tone="indigo">Killer feature 01</Badge>
-              <h3 className="mt-3 text-2xl font-semibold text-zinc-900">
-                Trial Tasks — real work before full-time
-              </h3>
-              <p className="mt-3 text-zinc-600">
-                Convert a PDF to Excel. Fix one React component. Edit one video. Answer 20
-                customer emails. Small, paid tasks that let employers see real work before
-                committing — and instantly upgrade a great performer to part-time, contract, or
-                full-time.
-              </p>
-              <ul className="mt-4 space-y-2 text-sm text-zinc-600">
-                <li className="flex gap-2"><span className="text-indigo-500">✓</span> Juniors and fresh graduates get real, paid experience</li>
-                <li className="flex gap-2"><span className="text-indigo-500">✓</span> Payment is held in escrow and released only on approval</li>
-                <li className="flex gap-2"><span className="text-indigo-500">✓</span> Every trial can convert instantly</li>
-              </ul>
-              <p className="mt-4 text-xs text-zinc-400">
-                Posting requires a{" "}
-                <Link href="/pricing" className="font-medium text-indigo-600 underline">
-                  StratPH subscription
-                </Link>{" "}
-                — it&apos;s how we keep the marketplace and its escrow trustworthy.
-              </p>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {MICRO_JOB_TICKETS.map((t) => (
-                <TicketCard key={t.title} ticket={t} />
-              ))}
-            </div>
-          </div>
-
-          <div className="mb-16 grid items-center gap-8 lg:grid-cols-2">
-            <div className="order-2 lg:order-1 rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                Employer search
-              </p>
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 font-mono text-sm text-zinc-700">
-                skill:React AND activity:AWS AND active:&lt;30d
-              </div>
-              <p className="mt-3 text-xs text-zinc-400">
-                Candidates surface because of what they shipped — not because they applied.
-              </p>
-            </div>
-            <div className="order-1 lg:order-2">
-              <Badge tone="emerald">Killer feature 02</Badge>
-              <h3 className="mt-3 text-2xl font-semibold text-zinc-900">
-                Reverse Hiring — candidates find you by doing, not applying
-              </h3>
-              <p className="mt-3 text-zinc-600">
-                Employers search &ldquo;React developer who deployed AWS in the last 30
-                days&rdquo; and get real people with verified activity — not just resumes. The
-                more you do on StratPH, the more discoverable you become.
-              </p>
-              <ul className="mt-4 space-y-2 text-sm text-zinc-600">
-                <li className="flex gap-2"><span className="text-emerald-500">✓</span> Activity, not adjectives, decides visibility</li>
-                <li className="flex gap-2"><span className="text-emerald-500">✓</span> Jobseekers control their discoverability</li>
-                <li className="flex gap-2"><span className="text-emerald-500">✓</span> Employers skip the resume pile entirely</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="grid items-center gap-8 lg:grid-cols-2">
-            <div>
-              <Badge tone="amber">Killer feature 03</Badge>
-              <h3 className="mt-3 text-2xl font-semibold text-zinc-900">
-                AI Career Gap Analyzer — know exactly what&apos;s missing
-              </h3>
-              <p className="mt-3 text-zinc-600">
-                Other platforms tell you a vague match score and leave you guessing why you
-                weren&apos;t picked. StratPH tells you precisely which skills stand between you
-                and the role — and links each gap straight to a Trial Task that lets you prove it.
-              </p>
-              <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm">
-                <p className="text-zinc-400 line-through decoration-2">&ldquo;You match 60%.&rdquo;</p>
-                <p className="mt-1 font-medium text-zinc-800">
-                  &ldquo;You&apos;re missing only these 3 skills.&rdquo;
+        {/* Escrow */}
+        <section id="escrow" className="pt-[clamp(56px,8vw,100px)]">
+          <div className="rounded-[20px] bg-navy p-[clamp(28px,4vw,52px)] text-white">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] items-start gap-[clamp(24px,4vw,56px)]">
+              <div>
+                <p className="font-plex-mono text-[11.5px] uppercase tracking-[0.09em] text-navy-accent">
+                  Escrow protected
+                </p>
+                <h2 className="mt-3 text-[clamp(26px,3.4vw,38px)] font-bold leading-[1.08] tracking-[-0.03em]">
+                  Money moves only when the work is approved.
+                </h2>
+                <p className="mt-4 max-w-[44ch] text-[15.5px] leading-[1.6] text-navy-fg-soft">
+                  One mechanism protects both sides: jobseekers never work for free, employers never pay for work
+                  they didn&apos;t get.
                 </p>
               </div>
-              <ul className="mt-4 space-y-2 text-sm text-zinc-600">
-                <li className="flex gap-2"><span className="text-amber-500">✓</span> No more vague match percentages</li>
-                <li className="flex gap-2"><span className="text-amber-500">✓</span> A clear, ranked list of missing skills</li>
-                <li className="flex gap-2"><span className="text-amber-500">✓</span> One click from a missing skill to a Trial Task that builds it</li>
-              </ul>
+
+              <div className="grid gap-0">
+                {ESCROW_STEPS.map((step, i) => (
+                  <div
+                    key={step.title}
+                    className={`relative ml-[9px] flex gap-4 pl-6 ${
+                      i < ESCROW_STEPS.length - 1 ? "border-l border-navy-line-2 pb-5" : ""
+                    }`}
+                  >
+                    <div className="absolute -left-[5px] top-1 h-[9px] w-[9px] rounded-full bg-navy-accent" />
+                    <div>
+                      <div className="text-[16px] font-semibold">{step.title}</div>
+                      <div className="mt-1 text-[14px] leading-[1.55] text-navy-fg-soft">{step.body}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="rounded-2xl border border-amber-200 bg-white p-6 shadow-sm">
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Gap report</p>
-                <Badge tone="amber">25% match</Badge>
-              </div>
-              <p className="mb-2 text-sm font-semibold text-zinc-900">Frontend Developer (React)</p>
-              <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-zinc-100">
-                <div className="h-full rounded-full bg-amber-500" style={{ width: "25%" }} />
-              </div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                Missing only these 3 skills
-              </p>
-              <div className="mb-4 flex flex-wrap gap-1.5">
-                <Badge tone="rose">JavaScript</Badge>
-                <Badge tone="rose">CSS</Badge>
-                <Badge tone="rose">Git</Badge>
-              </div>
-              <p className="text-xs text-emerald-600">✓ React already verified via a completed Trial Task</p>
+
+            <div className="mt-7 border-t border-navy-line pt-[18px] font-plex-mono text-[11px] tracking-[0.04em] text-navy-fg-softer">
+              Demo prototype — escrow is simulated within StratPH for illustration. No real funds move.
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Dashboards */}
-      <section id="dashboards" className="py-20">
-        <div className="mx-auto w-full max-w-6xl px-6">
-          <div className="mb-12 text-center">
-            <Badge tone="zinc">One platform, three roles</Badge>
-            <h2 className="mt-3 text-2xl font-semibold text-zinc-900 sm:text-3xl">
-              Purpose-built dashboards for every side of the marketplace
+        {/* Features */}
+        <section id="features" className="pt-[clamp(56px,8vw,100px)]">
+          <div className="max-w-[640px]">
+            <p className="font-plex-mono text-[11.5px] uppercase tracking-[0.09em] text-ink-faint">
+              Three things that don&apos;t exist together anywhere else
+            </p>
+            <h2 className="mt-3 text-[clamp(28px,3.8vw,42px)] font-bold leading-[1.05] tracking-[-0.03em]">
+              Built for both sides of the hire.
             </h2>
           </div>
-          <div className="grid gap-6 sm:grid-cols-3">
-            {DASHBOARDS.map((d) => (
-              <div key={d.title} className="rounded-2xl border border-zinc-200 bg-white p-6">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-50 text-2xl">
-                  {d.icon}
-                </div>
-                <Badge tone={d.tone}>{d.title}</Badge>
-                <p className="mt-3 text-sm text-zinc-600">{d.body}</p>
+
+          {/* 01 Trial Tasks */}
+          <div className="mt-12 grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-center gap-[clamp(28px,4vw,56px)] border-b border-paper-line pb-12">
+            <div>
+              <p className="font-plex-mono text-[11px] tracking-[0.08em] text-ink-faint">01 — TRIAL TASKS</p>
+              <h3 className="mt-2.5 text-[clamp(22px,2.4vw,28px)] font-bold leading-[1.15] tracking-[-0.025em]">
+                Real work before full-time
+              </h3>
+              <p className="mt-3 max-w-[46ch] text-[15.5px] leading-[1.6] text-ink-soft">
+                Convert a PDF. Fix one component. Answer 20 support emails. Small, paid tasks that show what someone
+                can actually do.
+              </p>
+              <div className="mt-5 grid gap-[10px]">
+                <Bullet color="text-seeker">
+                  <strong className="font-semibold">Jobseekers:</strong> paid experience even if you&apos;re not hired.
+                </Bullet>
+                <Bullet color="text-employer">
+                  <strong className="font-semibold">Employers:</strong> evidence for a fraction of a bad-hire&apos;s cost.
+                </Bullet>
               </div>
-            ))}
+            </div>
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-[10px]">
+              {FEATURE_TICKETS.map((t) => (
+                <div key={t.title} className="rounded-[12px] border border-paper-line bg-white p-[15px]">
+                  <div className="font-plex-mono text-[9.5px] tracking-[0.08em] text-ink-faint">{t.label}</div>
+                  <div className="mt-1.5 text-[14px] font-semibold leading-[1.3]">{t.title}</div>
+                  <div className="mt-2.5 text-[16px] font-bold">{t.price}</div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
 
-      {/* Final CTA */}
-      <section className="relative isolate overflow-hidden bg-zinc-900 py-20">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-32 left-1/2 -z-10 h-[28rem] w-[56rem] -translate-x-1/2 rounded-full bg-gradient-to-tr from-indigo-500 via-sky-500 to-amber-400 opacity-30 blur-3xl"
-        />
-        <div className="mx-auto w-full max-w-3xl px-6 text-center">
-          <h2 className="text-3xl font-semibold text-white sm:text-4xl">
-            Stop guessing. Start proving.
-          </h2>
-          <p className="mt-3 text-zinc-400">
-            Log in with a demo account and try the jobseeker, employer, and admin dashboards.
+          {/* 02 Reverse hiring */}
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-center gap-[clamp(28px,4vw,56px)] border-b border-paper-line py-12">
+            <div className="rounded-[14px] border border-paper-line bg-white p-5">
+              <p className="font-plex-mono text-[10px] tracking-[0.08em] text-ink-faint">EMPLOYER SEARCH</p>
+              <div className="mt-3 break-words rounded-[9px] border border-paper-line-soft bg-paper-chip-2 p-3 font-plex-mono text-[12.5px] leading-[1.6] text-ink/90">
+                skill:React AND activity:AWS AND active:&lt;30d
+              </div>
+              <p className="mt-3 text-[12.5px] leading-[1.5] text-ink-softer">
+                Ranked by verified, delivered work — not by who applied fastest.
+              </p>
+            </div>
+            <div>
+              <p className="font-plex-mono text-[11px] tracking-[0.08em] text-ink-faint">02 — REVERSE HIRING</p>
+              <h3 className="mt-2.5 text-[clamp(22px,2.4vw,28px)] font-bold leading-[1.15] tracking-[-0.025em]">
+                Found by doing, not applying
+              </h3>
+              <p className="mt-3 max-w-[46ch] text-[15.5px] leading-[1.6] text-ink-soft">
+                Employers search for proven activity and get real people with verified track records. The more you
+                do on StratPH, the more discoverable you become.
+              </p>
+              <div className="mt-5 grid gap-[10px]">
+                <Bullet color="text-seeker">
+                  <strong className="font-semibold">Jobseekers:</strong> you control your discoverability.
+                </Bullet>
+                <Bullet color="text-employer">
+                  <strong className="font-semibold">Employers:</strong> skip the résumé pile entirely.
+                </Bullet>
+              </div>
+            </div>
+          </div>
+
+          {/* 03 AI Career Gap Analyzer */}
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-center gap-[clamp(28px,4vw,56px)] pt-12">
+            <div>
+              <p className="font-plex-mono text-[11px] tracking-[0.08em] text-ink-faint">03 — AI CAREER GAP ANALYZER</p>
+              <h3 className="mt-2.5 text-[clamp(22px,2.4vw,28px)] font-bold leading-[1.15] tracking-[-0.025em]">
+                Know exactly what&apos;s missing
+              </h3>
+              <p className="mt-3 max-w-[46ch] text-[15.5px] leading-[1.6] text-ink-soft">
+                Not a vague match percentage. A ranked list of the precise skills between you and the role — each one
+                linked to a Trial Task that proves it.
+              </p>
+              <div className="mt-5 grid gap-[10px]">
+                <Bullet color="text-seeker">
+                  <strong className="font-semibold">Jobseekers:</strong> one click from a gap to the task that closes it.
+                </Bullet>
+                <Bullet color="text-employer">
+                  <strong className="font-semibold">Employers:</strong> a talent pool that closes its own gaps.
+                </Bullet>
+              </div>
+            </div>
+            <div className="rounded-[14px] border border-paper-line bg-white p-5">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-plex-mono text-[10px] tracking-[0.08em] text-ink-faint">GAP REPORT</p>
+                <span className="rounded-[6px] bg-match-tint px-[9px] py-1 text-[11px] font-semibold text-match-fg">
+                  75% match
+                </span>
+              </div>
+              <div className="mt-3 text-[17px] font-bold tracking-[-0.02em]">Frontend Developer (React)</div>
+              <div className="mt-3 h-[7px] overflow-hidden rounded-full bg-paper-chip">
+                <div className="h-full w-[75%] bg-match" />
+              </div>
+              <p className="mt-[18px] font-plex-mono text-[10px] tracking-[0.08em] text-ink-faint">
+                MISSING ONLY THESE 3 SKILLS
+              </p>
+              <div className="mt-2.5 flex flex-wrap gap-[7px]">
+                {GAP_SKILLS.map((skill) => (
+                  <span key={skill} className="rounded-[7px] bg-gap-tint px-2.5 py-1.5 text-[12.5px] text-gap-fg">
+                    {skill}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-3.5 text-[13px] leading-[1.5] text-verified-3">
+                React already verified via a completed Trial Task.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Pricing */}
+        <section id="pricing" className="pt-[clamp(56px,8vw,100px)]">
+          <div className="max-w-[620px]">
+            <p className="font-plex-mono text-[11.5px] uppercase tracking-[0.09em] text-ink-faint">Pricing</p>
+            <h2 className="mt-3 text-[clamp(28px,3.8vw,42px)] font-bold leading-[1.05] tracking-[-0.03em]">
+              Free to prove yourself. Paid to hire.
+            </h2>
+          </div>
+
+          <div className="mt-9 grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-[14px]">
+            <div className="rounded-[16px] border border-paper-line bg-white p-7">
+              <p className="font-plex-mono text-[11px] tracking-[0.08em] text-seeker">JOBSEEKERS</p>
+              <div className="mt-2.5 text-[34px] font-bold tracking-[-0.03em]">Free</div>
+              <p className="mt-2 mb-5 text-[14.5px] leading-[1.6] text-ink-soft">
+                Browse and take Trial Tasks, keep 100% of approved task pay, build a searchable track record, and run
+                gap reports.
+              </p>
+              <Link
+                href="/register/jobseeker"
+                className="inline-block rounded-[9px] bg-seeker px-5 py-3 text-[15px] font-semibold text-white"
+              >
+                Create a free profile
+              </Link>
+            </div>
+            <div className="rounded-[16px] border border-paper-line bg-white p-7">
+              <p className="font-plex-mono text-[11px] tracking-[0.08em] text-employer">EMPLOYERS</p>
+              <div className="mt-2.5 text-[34px] font-bold tracking-[-0.03em]">
+                Subscription<span className="text-[15px] font-normal text-ink-softer"> + task fees</span>
+              </div>
+              <p className="mt-2 mb-5 text-[14.5px] leading-[1.6] text-ink-soft">
+                Post and fund unlimited Trial Tasks, search verified talent, and convert to full-time with no
+                placement fee. Task pay goes entirely to the worker.
+              </p>
+              <Link
+                href="/register/employer"
+                className="inline-block rounded-[9px] bg-employer px-5 py-3 text-[15px] font-semibold text-white"
+              >
+                Start hiring
+              </Link>
+            </div>
+          </div>
+          <p className="mt-[14px] text-[12.5px] text-ink-softer">
+            Subscriptions keep the marketplace and its escrow trustworthy — and keep jobseekers free of fees.
           </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link href="/login">
-              <Button size="lg">Try the demo</Button>
-            </Link>
+        </section>
+
+        {/* Final CTA */}
+        <section className="pt-[clamp(56px,8vw,100px)] pb-[clamp(48px,7vw,90px)]">
+          <div className="rounded-[20px] bg-navy px-[clamp(24px,5vw,60px)] py-[clamp(36px,6vw,72px)] text-center text-white">
+            <h2 className="text-balance text-[clamp(30px,4.6vw,52px)] font-bold leading-[1.03] tracking-[-0.035em]">
+              Stop guessing. Start proving.
+            </h2>
+            <p className="mx-auto mt-4 max-w-[48ch] text-[clamp(15px,1.4vw,17.5px)] leading-[1.55] text-navy-fg-soft">
+              Try the demo with a jobseeker, employer, or admin account and see the whole loop end to end.
+            </p>
+            <div className="mt-[30px] flex flex-wrap justify-center gap-3">
+              <Link
+                href="/register/jobseeker"
+                className="rounded-[10px] bg-white px-6 py-3.5 text-[15.5px] font-semibold text-ink"
+              >
+                I&apos;m looking for work
+              </Link>
+              <Link
+                href="/register/employer"
+                className="rounded-[10px] border border-navy-line-2 px-6 py-3.5 text-[15.5px] font-semibold text-white"
+              >
+                I&apos;m hiring
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-paper-line">
+        <div className={`${CONTAINER} flex flex-wrap items-center justify-between gap-4 py-8 text-[12.5px] text-ink-softer`}>
+          <div>StratPH — UI prototype. Subscriptions and escrow are simulated for demonstration; no real funds move.</div>
+          <div className="flex gap-[18px]">
+            <a href="#how" className="text-ink-softer">How it works</a>
+            <a href="#pricing" className="text-ink-softer">Pricing</a>
+            <Link href="/login" className="text-ink-softer">Log in</Link>
           </div>
         </div>
-      </section>
-
-      <footer className="border-t border-zinc-100 py-6 text-center text-xs text-zinc-400">
-        StratPH — UI prototype. Subscriptions and escrow are simulated for demonstration; no real
-        funds move.
       </footer>
     </div>
   );
 }
 
-function TicketCard({
-  ticket,
-}: {
-  ticket: { title: string; pay: string; category: string; rotate: string };
-}) {
+function Bullet({ color, children }: { color: string; children: ReactNode }) {
   return (
-    <div
-      className={`relative rounded-xl border border-dashed border-zinc-300 bg-white p-4 shadow-sm transition-transform hover:rotate-0 hover:shadow-md ${ticket.rotate}`}
-    >
-      <div className="absolute -left-2 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-white ring-1 ring-inset ring-zinc-200" />
-      <div className="absolute -right-2 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-white ring-1 ring-inset ring-zinc-200" />
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">{ticket.category}</p>
-      <p className="mt-1 text-sm font-semibold text-zinc-900">{ticket.title}</p>
-      <div className="mt-2 flex items-center gap-1.5">
-        <p className="text-lg font-bold text-emerald-600">{ticket.pay}</p>
-        <span className="text-xs text-zinc-400" title="Held in escrow until approved">🔒</span>
-      </div>
+    <div className="flex items-baseline gap-[10px]">
+      <span className={`text-[13px] ${color}`}>◆</span>
+      <span className="text-[14.5px] text-ink/90">{children}</span>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { getUserById, formatPeso, formatDate } from "@/lib/helpers";
 import { Badge, Button, Card, Textarea, Input } from "@/components/ui/Primitives";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ReportEmployerButton } from "@/components/ReportEmployerButton";
+import { FollowEmployerButton } from "@/components/FollowEmployerButton";
 
 export default function MicroJobDetail() {
   const { id } = useParams<{ id: string }>();
@@ -64,7 +65,8 @@ export default function MicroJobDetail() {
               {employer?.companyName} · Posted {formatDate(microJob.createdAt)}
             </p>
             {employer ? (
-              <div className="mt-1">
+              <div className="mt-1 flex items-center gap-3">
+                <FollowEmployerButton employerId={employer.id} />
                 <ReportEmployerButton
                   employerId={employer.id}
                   employerName={employer.companyName || employer.name}

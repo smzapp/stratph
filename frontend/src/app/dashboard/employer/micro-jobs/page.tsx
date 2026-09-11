@@ -1,54 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import type { FormEvent } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/store";
 import { getMicroJobsForEmployer, formatDate, formatPeso, isSubscriptionActive, timeAgo } from "@/lib/helpers";
-import {
-  Badge,
-  Button,
-  Card,
-  EmptyState,
-  Input,
-  PageHeader,
-  Select,
-  Textarea,
-} from "@/components/ui/Primitives";
-import { Modal } from "@/components/ui/Modal";
+import { Badge, Button, Card, EmptyState, PageHeader } from "@/components/ui/Primitives";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { CATEGORIES } from "@/lib/constants";
-
-interface MicroJobFormState {
-  title: string;
-  category: string;
-  description: string;
-  deliverable: string;
-  pay: string;
-  estimatedTime: string;
-  skillsRequired: string;
-  expiresAt: string;
-  minYearsOfExperience: string;
-  minProfileCompleteness: string;
-}
-
-const EMPTY_FORM: MicroJobFormState = {
-  title: "",
-  category: CATEGORIES[0],
-  description: "",
-  deliverable: "",
-  pay: "500",
-  estimatedTime: "1 day",
-  skillsRequired: "",
-  expiresAt: "",
-  minYearsOfExperience: "",
-  minProfileCompleteness: "",
-};
 
 export default function EmployerMicroJobs() {
-  const { db, settings, currentUser, postMicroJob, closeMicroJob } = useApp();
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<MicroJobFormState>(EMPTY_FORM);
+  const { db, currentUser, closeMicroJob } = useApp();
 
   if (!currentUser) return null;
 
@@ -58,24 +17,6 @@ export default function EmployerMicroJobs() {
 
   const isSubscribed = isSubscriptionActive(currentUser);
 
-  function handleCreate(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!currentUser) return;
-    postMicroJob(currentUser.id, {
-      ...form,
-      pay: Number(form.pay),
-      skillsRequired: form.skillsRequired
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
-      expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : undefined,
-      minYearsOfExperience: form.minYearsOfExperience ? Number(form.minYearsOfExperience) : undefined,
-      minProfileCompleteness: form.minProfileCompleteness ? Number(form.minProfileCompleteness) : undefined,
-    });
-    setForm(EMPTY_FORM);
-    setOpen(false);
-  }
-
   return (
     <div>
       <PageHeader
@@ -83,9 +24,12 @@ export default function EmployerMicroJobs() {
         title="Trial Tasks"
         description="Post a small, paid task. Great performers can be upgraded instantly — no separate hiring process."
         actions={
-          <Button onClick={() => setOpen(true)} disabled={!isSubscribed} title={!isSubscribed ? "Requires an active subscription" : undefined}>
-            Post a Trial Task
-          </Button>
+          <Link
+            href="/dashboard/employer/micro-jobs/new"
+            title={!isSubscribed ? "Requires an active subscription" : undefined}
+          >
+            <Button>Post a Trial Task</Button>
+          </Link>
         }
       />
 
@@ -111,9 +55,9 @@ export default function EmployerMicroJobs() {
           title="You haven't posted a Trial Task yet"
           description="Turn a real task into a paid work trial and see who delivers."
           action={
-            <Button onClick={() => setOpen(true)} disabled={!isSubscribed}>
-              Post your first Trial Task
-            </Button>
+            <Link href="/dashboard/employer/micro-jobs/new">
+              <Button disabled={!isSubscribed}>Post your first Trial Task</Button>
+            </Link>
           }
         />
       ) : (
@@ -166,113 +110,6 @@ export default function EmployerMicroJobs() {
         </div>
       )}
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Post a Trial Task" wide>
-        <form onSubmit={handleCreate} className="space-y-4">
-          <Input
-            label="Title"
-            placeholder="e.g. Fix one broken checkout button"
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-            required
-          />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Select
-              label="Category"
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
-            >
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </Select>
-            <Input
-              label="Estimated time"
-              placeholder="e.g. 4 hours"
-              value={form.estimatedTime}
-              onChange={(e) => setForm({ ...form, estimatedTime: e.target.value })}
-              required
-            />
-          </div>
-          <Textarea
-            label="Task description"
-            rows={3}
-            placeholder="Describe exactly what needs to be done…"
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            required
-          />
-          <Textarea
-            label="What should they submit?"
-            rows={2}
-            placeholder="e.g. Link to the deployed fix + a short screen recording"
-            value={form.deliverable}
-            onChange={(e) => setForm({ ...form, deliverable: e.target.value })}
-            required
-          />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Input
-              label="Pay (₱300–₱3,000)"
-              type="number"
-              min={300}
-              max={3000}
-              step={50}
-              value={form.pay}
-              onChange={(e) => setForm({ ...form, pay: e.target.value })}
-              hint="StratPH holds this amount in escrow and releases it to the jobseeker once you approve their work."
-              required
-            />
-            <Input
-              label="Skills required (comma-separated)"
-              placeholder="React, CSS"
-              value={form.skillsRequired}
-              onChange={(e) => setForm({ ...form, skillsRequired: e.target.value })}
-            />
-          </div>
-          <Input
-            label="Applications close on (optional)"
-            type="date"
-            value={form.expiresAt}
-            onChange={(e) => setForm({ ...form, expiresAt: e.target.value })}
-            hint="Leave blank to keep this Trial Task open until you close it manually."
-          />
-          <div className="rounded-lg border border-zinc-200 p-3">
-            <p className="mb-3 text-sm font-medium text-zinc-700">Who can apply? (optional restrictions)</p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Input
-                label="Minimum years of experience"
-                type="number"
-                min={0}
-                max={60}
-                placeholder="e.g. 2"
-                value={form.minYearsOfExperience}
-                onChange={(e) => setForm({ ...form, minYearsOfExperience: e.target.value })}
-              />
-              <Input
-                label="Minimum profile completeness %"
-                type="number"
-                min={0}
-                max={100}
-                placeholder="e.g. 70"
-                value={form.minProfileCompleteness}
-                onChange={(e) => setForm({ ...form, minProfileCompleteness: e.target.value })}
-              />
-            </div>
-          </div>
-          <p className="text-xs text-zinc-400">
-            {settings?.microJobAutoApprove
-              ? "New postings go live immediately for jobseekers to see."
-              : "New postings go through a quick admin review before appearing to jobseekers."}
-          </p>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">Post Trial Task</Button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 }

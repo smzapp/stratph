@@ -30,6 +30,13 @@ export interface CreateUserInput {
   category?: string;
   yearsOfExperience?: number;
   preferredJobType?: string;
+  // Set when this employer is joining an existing team via invite — the new
+  // account inherits the team owner's verification/subscription snapshot so
+  // teammates aren't stuck unverified/unsubscribed the moment they join.
+  teamOwnerId?: string;
+  verified?: boolean;
+  subscriptionPlan?: string | null;
+  subscriptionExpiresAt?: Date | null;
 }
 
 export interface PaginatedUsers {
@@ -118,7 +125,10 @@ export class UsersService {
       status: UserStatus.ACTIVE,
       companyName: input.companyName ?? null,
       companyBlurb: input.companyBlurb ?? null,
-      verified: input.role === Role.EMPLOYER ? false : null,
+      verified: input.role === Role.EMPLOYER ? (input.verified ?? false) : null,
+      teamOwnerId: input.teamOwnerId ?? null,
+      subscriptionPlan: input.role === Role.EMPLOYER ? (input.subscriptionPlan ?? null) : null,
+      subscriptionExpiresAt: input.role === Role.EMPLOYER ? (input.subscriptionExpiresAt ?? null) : null,
       headline: input.headline ?? null,
       location: input.location ?? null,
       bio: input.bio ?? null,
@@ -241,8 +251,17 @@ export class UsersService {
       if (dto.portfolioLinks !== undefined) user.portfolioLinks = dto.portfolioLinks;
       if (dto.languages !== undefined) user.languages = dto.languages;
       if (dto.availability !== undefined) user.availability = dto.availability;
+      if (dto.jobAlertsEnabled !== undefined) user.jobAlertsEnabled = dto.jobAlertsEnabled;
     }
     return this.usersRepo.save(user);
+  }
+
+  findTeamMembers(teamOwnerId: string): Promise<User[]> {
+    return this.usersRepo.find({ where: { teamOwnerId } });
+  }
+
+  async setTeamOwner(userId: string, teamOwnerId: string | null): Promise<void> {
+    await this.usersRepo.update(userId, { teamOwnerId });
   }
 
   async setDiscoverable(userId: string, discoverable: boolean): Promise<User> {

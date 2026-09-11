@@ -10,6 +10,7 @@ import type {
   AppDb,
   ChatMessage,
   ConversationSummary,
+  FollowedEmployer,
   LoginResult,
   ModerationStatus,
   NewJobInput,
@@ -17,12 +18,17 @@ import type {
   Notification,
   OfferStatus,
   OfferType,
+  PipelineEntry,
+  PipelineStage,
   PlatformSettings,
   ProfilePatch,
   RegisterEmployerInput,
   RegisterJobseekerInput,
   ReportReason,
   SubscriptionPlan,
+  TalentListMember,
+  TalentListSummary,
+  TeamInfo,
   User,
   UserStatus,
 } from "./types";
@@ -55,6 +61,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [messageDeletedSignal, setMessageDeletedSignal] = useState<
     { conversationId: string; message: ChatMessage; at: number } | null
   >(null);
+  const [followedEmployers, setFollowedEmployers] = useState<FollowedEmployer[]>([]);
+  const [talentLists, setTalentLists] = useState<TalentListSummary[]>([]);
+  const [pipeline, setPipeline] = useState<PipelineEntry[]>([]);
+  const [team, setTeam] = useState<TeamInfo | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadAll = useCallback(async () => {
@@ -81,6 +91,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setConversations(res);
     } catch {
       // ignore — conversations are best-effort on load
+    }
+  }, []);
+
+  // Best-effort, silently ignored for employer accounts (the endpoint is
+  // jobseeker-only) rather than branching on role before calling it.
+  const loadFollowedEmployers = useCallback(async () => {
+    try {
+      const res = await apiFetch<FollowedEmployer[]>("/me/following");
+      setFollowedEmployers(res);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const loadTalentLists = useCallback(async () => {
+    try {
+      const res = await apiFetch<TalentListSummary[]>("/talent/lists");
+      setTalentLists(res);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const loadPipeline = useCallback(async () => {
+    try {
+      const res = await apiFetch<PipelineEntry[]>("/talent/pipeline");
+      setPipeline(res);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const loadTeam = useCallback(async () => {
+    try {
+      const res = await apiFetch<TeamInfo>("/talent/team");
+      setTeam(res);
+    } catch {
+      // ignore
     }
   }, []);
 
@@ -139,7 +187,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const me = await apiFetch<User>("/auth/me");
         if (cancelled) return;
         setUserId(me.id);
-        await Promise.all([loadAll(), loadNotifications(), loadConversations()]);
+        await Promise.all([loadAll(), loadNotifications(), loadConversations(), loadFollowedEmployers()]);
         connectRealtime(token);
       } catch {
         setToken(null);
@@ -151,7 +199,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [loadAll, loadNotifications, loadConversations, connectRealtime]);
+  }, [loadAll, loadNotifications, loadConversations, loadFollowedEmployers, connectRealtime]);
 
   const currentUser = useMemo(() => db.users.find((u) => u.id === userId) || null, [db.users, userId]);
 
@@ -159,11 +207,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async (res: AuthResponse): Promise<LoginResult> => {
       setToken(res.accessToken);
       setUserId(res.user.id);
-      await Promise.all([loadAll(), loadNotifications(), loadConversations()]);
+      await Promise.all([loadAll(), loadNotifications(), loadConversations(), loadFollowedEmployers()]);
       connectRealtime(res.accessToken);
       return { ok: true, user: res.user };
     },
-    [loadAll, loadNotifications, loadConversations, connectRealtime],
+    [loadAll, loadNotifications, loadConversations, loadFollowedEmployers, connectRealtime],
   );
 
   const actions = useMemo(
@@ -212,6 +260,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setNotifications([]);
         setConversations([]);
         setTypingConversationId(null);
+        setFollowedEmployers([]);
+        setTalentLists([]);
+        setPipeline([]);
+        setTeam(null);
         disconnectSocket();
       },
 
@@ -341,6 +393,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setNotifications([]);
           setConversations([]);
           setTypingConversationId(null);
+          setFollowedEmployers([]);
+          setTalentLists([]);
+          setPipeline([]);
+          setTeam(null);
           disconnectSocket();
         }
       },
@@ -608,8 +664,163 @@ export function AppProvider({ children }: { children: ReactNode }) {
           // ignore
         }
       },
+
+      async loadFollowedEmployers() {
+        await loadFollowedEmployers();
+      },
+
+      async followEmployer(employerId: string) {
+        try {
+          await apiFetch(`/users/${employerId}/follow`, { method: "POST" });
+          await loadFollowedEmployers();
+          return true;
+        } catch (err) {
+          window.alert(errorMessage(err));
+          return false;
+        }
+      },
+
+      async unfollowEmployer(employerId: string) {
+        try {
+          await apiFetch(`/users/${employerId}/follow`, { method: "DELETE" });
+          await loadFollowedEmployers();
+          return true;
+        } catch (err) {
+          window.alert(errorMessage(err));
+          return false;
+        }
+      },
+
+      async loadTalentLists() {
+        await loadTalentLists();
+      },
+
+      async createTalentList(name: string) {
+        try {
+          const created = await apiFetch<TalentListSummary>("/talent/lists", {
+            method: "POST",
+            body: JSON.stringify({ name }),
+          });
+          await loadTalentLists();
+          return created;
+        } catch (err) {
+          window.alert(errorMessage(err));
+          return null;
+        }
+      },
+
+      async deleteTalentList(listId: string) {
+        try {
+          await apiFetch(`/talent/lists/${listId}`, { method: "DELETE" });
+          await loadTalentLists();
+          return true;
+        } catch (err) {
+          window.alert(errorMessage(err));
+          return false;
+        }
+      },
+
+      async addToTalentList(listId: string, jobseekerId: string) {
+        try {
+          await apiFetch(`/talent/lists/${listId}/members`, {
+            method: "POST",
+            body: JSON.stringify({ jobseekerId }),
+          });
+          await loadTalentLists();
+          return true;
+        } catch (err) {
+          window.alert(errorMessage(err));
+          return false;
+        }
+      },
+
+      async removeFromTalentList(listId: string, jobseekerId: string) {
+        try {
+          await apiFetch(`/talent/lists/${listId}/members/${jobseekerId}`, { method: "DELETE" });
+          await loadTalentLists();
+          return true;
+        } catch (err) {
+          window.alert(errorMessage(err));
+          return false;
+        }
+      },
+
+      async getTalentListMembers(listId: string) {
+        try {
+          return await apiFetch<TalentListMember[]>(`/talent/lists/${listId}/members`);
+        } catch (err) {
+          window.alert(errorMessage(err));
+          return [];
+        }
+      },
+
+      async loadPipeline() {
+        await loadPipeline();
+      },
+
+      async setPipelineStage(jobseekerId: string, stage: PipelineStage) {
+        try {
+          await apiFetch(`/talent/pipeline/${jobseekerId}`, {
+            method: "PATCH",
+            body: JSON.stringify({ stage }),
+          });
+          await loadPipeline();
+          return true;
+        } catch (err) {
+          window.alert(errorMessage(err));
+          return false;
+        }
+      },
+
+      async removeFromPipeline(jobseekerId: string) {
+        try {
+          await apiFetch(`/talent/pipeline/${jobseekerId}`, { method: "DELETE" });
+          await loadPipeline();
+          return true;
+        } catch (err) {
+          window.alert(errorMessage(err));
+          return false;
+        }
+      },
+
+      async loadTeam() {
+        await loadTeam();
+      },
+
+      async inviteTeammate(email: string) {
+        try {
+          await apiFetch("/talent/team/invites", { method: "POST", body: JSON.stringify({ email }) });
+          await loadTeam();
+          return true;
+        } catch (err) {
+          window.alert(errorMessage(err));
+          return false;
+        }
+      },
+
+      async removeTeammate(teammateId: string) {
+        try {
+          await apiFetch(`/talent/team/members/${teammateId}`, { method: "DELETE" });
+          await loadTeam();
+          return true;
+        } catch (err) {
+          window.alert(errorMessage(err));
+          return false;
+        }
+      },
     }),
-    [db.users, userId, loadAll, refresh, afterAuth, loadConversations],
+    [
+      db.users,
+      userId,
+      loadAll,
+      refresh,
+      afterAuth,
+      loadConversations,
+      loadFollowedEmployers,
+      loadTalentLists,
+      loadPipeline,
+      loadTeam,
+    ],
   );
 
   const unreadNotificationCount = useMemo(
@@ -635,6 +846,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       typingConversationId,
       messageReadSignal,
       messageDeletedSignal,
+      followedEmployers,
+      talentLists,
+      pipeline,
+      team,
       ...actions,
     }),
     [
@@ -649,6 +864,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       typingConversationId,
       messageReadSignal,
       messageDeletedSignal,
+      followedEmployers,
+      talentLists,
+      pipeline,
+      team,
       actions,
     ],
   );

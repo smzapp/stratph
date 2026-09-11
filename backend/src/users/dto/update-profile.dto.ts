@@ -1,4 +1,4 @@
-import { IsArray, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import type { Availability, EducationEntry, ExperienceEntry, PortfolioLink } from '../user.entity.js';
 
 export class UpdateProfileDto {
@@ -85,4 +85,8 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsIn(['available', 'open', 'unavailable'])
   availability?: Availability;
+
+  @IsOptional()
+  @IsBoolean()
+  jobAlertsEnabled?: boolean;
 }

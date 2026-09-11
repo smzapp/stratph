@@ -61,7 +61,7 @@ export default function EmployerOverview() {
             <Link href="/dashboard/employer/search">
               <Button variant="outline">Search candidates</Button>
             </Link>
-            <Link href="/dashboard/employer/micro-jobs">
+            <Link href="/dashboard/employer/micro-jobs/new">
               <Button>Post a Trial Task</Button>
             </Link>
           </>

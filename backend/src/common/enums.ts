@@ -60,6 +60,16 @@ export enum NotificationType {
   SUBSCRIPTION_ACTIVATED = 'subscription_activated',
   EMPLOYER_REPORTED = 'employer_reported',
   RECOMMENDATION_RECEIVED = 'recommendation_received',
+  NEW_TASK_FROM_FOLLOWED_EMPLOYER = 'new_task_from_followed_employer',
+  TEAM_INVITE_ACCEPTED = 'team_invite_accepted',
+}
+
+export enum PipelineStage {
+  SOURCED = 'sourced',
+  CONTACTED = 'contacted',
+  TRIAL_SENT = 'trial_sent',
+  HIRED = 'hired',
+  REJECTED = 'rejected',
 }
 
 export enum SubscriptionPlan {
